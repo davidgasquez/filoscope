@@ -48,9 +48,9 @@ jobs:
         env:
           GIT_LFS_SKIP_SMUDGE: "1"
         run: |
-          git submodule sync --recursive
-          git submodule update --init --recursive --depth 1
-          git submodule update --remote --recursive --depth 1
+          git submodule sync
+          git submodule update --init --depth 1
+          git submodule update --remote --depth 1
 
       - name: Build index
         env:
