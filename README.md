@@ -1,89 +1,86 @@
-# Filecoin Ecosystem Context Index
+# filoscope
 
-Use this repo to search Filecoin docs and code with QMD. Lets you search a curated set of public Filecoin resources!
+Search Filecoin docs and code from a prebuilt QMD index.
 
-## Setup
+`filoscope` is a small `npx` CLI for grounded Filecoin ecosystem search without cloning every source repo. It downloads the latest compressed SQLite index from this repo's GitHub Releases, stores it where QMD expects a named index, and queries it through the QMD SDK.
 
-Clone this repo to a cache folder that stays on the machine. Use `XDG_CACHE_HOME` when it is set. On Linux, the usual path is `~/.cache/filecoin-ecosystem-context-index`. On macOS, the usual path is `~/Library/Caches/filecoin-ecosystem-context-index`.
-
-Install QMD if needed.
+## Use
 
 ```bash
-npm install -g @tobilu/qmd
+npx filoscope pull
+npx filoscope status
+npx filoscope search '"FIP-0081"' -c fips -n 5
+npx filoscope query "how does Filecoin storage power work"
+npx filoscope get '#4cb064:1:40'
 ```
 
-If an agent will use the index, have it read the QMD instructions and help first.
+Use `search` for exact terms and `query` for broader questions. Fetch source text with `get` before making claims.
+
+Useful commands:
 
 ```bash
-qmd skill show
-qmd --help
+npx filoscope search '"daily_network_activity_by_method"' -c fdp -n 10
+npx filoscope query -c fdp $'intent: Find how an FDP dataset is built.\nlex: raw model main materialize asset schema test\nvec: where the portal defines and validates this dataset'
+npx filoscope multi-get 'fips/FIPS/*.md' -l 80 --format md
 ```
 
-Clone or pull this repo in that cache folder. Then run these commands from the repo root.
+## Cache
+
+Default cache paths:
+
+```text
+$XDG_CACHE_HOME/qmd/filoscope.sqlite
+~/.cache/qmd/filoscope.sqlite
+```
+
+`filoscope` also writes `filoscope.release-tag.txt` beside the DB and a QMD config sidecar at:
+
+```text
+$XDG_CONFIG_HOME/qmd/filoscope.yml
+~/.config/qmd/filoscope.yml
+```
+
+That makes the same index usable with QMD:
 
 ```bash
-mkdir -p .qmd/external/filecoin-data-portal
-qmd update
-qmd embed --chunk-strategy auto
-qmd status
+qmd --index filoscope search '"FIP-0081"' -c fips -n 5
 ```
 
-During first setup, QMD clones public repos and downloads local models. To refresh later, pull this repo first. Then run `qmd update` and `qmd embed --chunk-strategy auto` again.
-
-## Search
-
-Run QMD from this repo root so it uses this index.
-
-Use `qmd query` when you are searching for an idea.
+## Local Development
 
 ```bash
-qmd query $'intent: Find Filecoin protocol, data pipeline, or portal implementation details.\nlex: lotus lily FIP actor deal sector provider market payment PDP Synapse\nvec: how Filecoin data, storage deals, actors, clients, and portal datasets are implemented' -n 10
+npm install
+node bin/filoscope.js --help
 ```
 
-Use `qmd search` when you know an exact name.
+Use an existing local build index:
 
 ```bash
-qmd search '"daily_network_activity_by_method"' -c fdp -n 10
-qmd search '"FIP-0081" FIP0081' -c fips -n 10
+mkdir -p /tmp/filoscope-cache/qmd
+cp .qmd/index.sqlite /tmp/filoscope-cache/qmd/filoscope.sqlite
+printf 'manual-local\n' > /tmp/filoscope-cache/qmd/filoscope.release-tag.txt
+XDG_CACHE_HOME=/tmp/filoscope-cache node bin/filoscope.js status
 ```
 
-Add `-c` when you know which source to search.
+## Build The Index
+
+The source collections are git submodules under `collections/`, and `.qmd/index.yml` is the QMD config.
 
 ```bash
-qmd query -c fdp $'intent: Find how an FDP dataset is built.\nlex: raw model main materialize asset schema test\nvec: where the portal defines and validates this dataset'
+make init
+make update
+make index
+make release
 ```
 
-Fetch the source text before making claims.
+`make release` writes `dist/filoscope.sqlite.gz`.
+
+## Release
+
+`.github/workflows/build-index.yml` runs daily and supports manual dispatch. It builds `.qmd/index.sqlite`, verifies the package, uploads a workflow artifact, and publishes `filoscope.sqlite.gz` to the `index-YYYY-MM-DD` GitHub Release.
+
+The npm package is published separately:
 
 ```bash
-qmd get '#abc123:80:100'
-qmd get qmd://fdp/assets/main/daily/network_metrics.sql:1:120
-qmd multi-get '#abc123,#def456' --format md
+npm publish --access public
 ```
-
-Use QMD ranges like `:80:100`. Do not pipe `qmd get` through `sed`, `head`, or `tail`. Use `--full-path` when you need a file path.
-
-## Use from another project
-
-You can keep another project unchanged and run QMD through this repo.
-
-```bash
-(cd /path/to/filecoin-ecosystem-context-index && qmd query -c fdp 'how is network_metrics built')
-```
-
-You can also make another project use this index with plain `qmd`. Link that project's `.qmd` folder to this repo's `.qmd` folder. Back up any existing `.qmd` folder first if you need it.
-
-```bash
-cd /path/to/filecoin-data-portal
-ln -sfn /path/to/filecoin-ecosystem-context-index/.qmd .qmd
-qmd query -c fdp 'how is network_metrics built'
-```
-
-After you link it, you can refresh from either folder. Both commands use the same QMD index.
-
-## Workflow
-
-1. Run and read `qmd skill show` if you have not used QMD before.
-2. Search with `qmd query` or `qmd search`.
-3. Retrieve full sources with `qmd get` or `qmd multi-get`.
-4. Answer from retrieved text and cite source documents, linking when possible.
