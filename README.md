@@ -77,7 +77,7 @@ make release
 
 ## Release
 
-`.github/workflows/build-index.yml` runs daily and supports manual dispatch. It builds `.qmd/index.sqlite`, verifies the package, uploads a workflow artifact, and publishes `filoscope.sqlite.gz` to the `index-YYYY-MM-DD` GitHub Release.
+`.github/workflows/build-index.yml` runs daily and supports manual dispatch. It restores the latest release index, updates it, rejects incomplete embeddings, uploads a workflow artifact, and publishes `filoscope.sqlite.gz` to the `index-YYYY-MM-DD` GitHub Release.
 
 The npm package is published separately:
 

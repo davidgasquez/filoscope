@@ -52,13 +52,55 @@ jobs:
           git submodule update --init --depth 1
           git submodule update --remote --depth 1
 
+      - name: Restore latest release index
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p .qmd "${RUNNER_TEMP}/filoscope-release"
+          if gh release download --repo "$GITHUB_REPOSITORY" \
+            --pattern filoscope.sqlite.gz \
+            --dir "${RUNNER_TEMP}/filoscope-release" \
+            --clobber; then
+            gzip -dc "${RUNNER_TEMP}/filoscope-release/filoscope.sqlite.gz" > .qmd/index.sqlite
+            test "$(sqlite3 .qmd/index.sqlite 'PRAGMA integrity_check;')" = "ok"
+          else
+            echo "No previous release index found; starting from an empty index."
+          fi
+
       - name: Build index
         env:
           QMD_FORCE_CPU: "1"
         run: |
           npx qmd update
-          npx qmd embed --chunk-strategy auto
+
+          pending_embeddings() {
+            node --input-type=module <<'NODE'
+          import { createStore } from "@tobilu/qmd";
+          const store = await createStore({ dbPath: ".qmd/index.sqlite" });
+          const status = await store.getStatus();
+          await store.close();
+          console.log(status.needsEmbedding);
+          NODE
+          }
+
+          for attempt in 1 2 3 4 5 6 7 8; do
+            pending="$(pending_embeddings)"
+            if [ "$pending" = "0" ]; then
+              break
+            fi
+
+            echo "Embedding attempt ${attempt}: ${pending} documents need embeddings."
+            npx qmd embed --chunk-strategy auto
+          done
+
           npx qmd cleanup
+
+          pending="$(pending_embeddings)"
+          if [ "$pending" != "0" ]; then
+            echo "::error::${pending} documents still need embeddings."
+            exit 1
+          fi
+
           sqlite3 .qmd/index.sqlite 'PRAGMA wal_checkpoint(TRUNCATE); VACUUM;'
           mkdir -p dist
           gzip -c .qmd/index.sqlite > dist/filoscope.sqlite.gz
@@ -72,7 +114,18 @@ jobs:
           mkdir -p "$XDG_CACHE_HOME/qmd"
           cp .qmd/index.sqlite "$XDG_CACHE_HOME/qmd/filoscope.sqlite"
           printf 'workflow-local\n' > "$XDG_CACHE_HOME/qmd/filoscope.release-tag.txt"
-          node bin/filoscope.js status --format json
+          node bin/filoscope.js status --format json > "${RUNNER_TEMP}/filoscope-status.json"
+          cat "${RUNNER_TEMP}/filoscope-status.json"
+          node --input-type=module - "${RUNNER_TEMP}/filoscope-status.json" <<'NODE'
+          import { readFileSync } from "node:fs";
+          const status = JSON.parse(readFileSync(process.argv[2], "utf8"));
+          if (status.needsEmbedding !== 0) {
+            throw new Error(`${status.needsEmbedding} documents still need embeddings`);
+          }
+          if (status.vectorCount === 0) {
+            throw new Error("Index has no vectors");
+          }
+          NODE
           node bin/filoscope.js search 'FIP-0081' -c fips -n 1 --format json
           npx qmd --index filoscope search 'FIP-0081' -c fips -n 1 --json
 
