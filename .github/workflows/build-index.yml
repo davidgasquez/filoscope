@@ -1,4 +1,4 @@
-name: Build QMD index
+name: Build Filoscope index
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: build-qmd-index
+  group: build-filoscope-index
   cancel-in-progress: false
 
 jobs:
@@ -30,21 +30,20 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y sqlite3
-
-      - name: Install package dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sqlite3
+          npm ci
 
       - name: Cache QMD models
         uses: actions/cache@v4
         with:
           path: ~/.cache/qmd/models
           key: qmd-models-${{ runner.os }}-${{ hashFiles('.qmd/index.yml', 'package-lock.json') }}
-          restore-keys: |
-            qmd-models-${{ runner.os }}-
+          restore-keys: qmd-models-${{ runner.os }}-
 
-      - name: Initialize collections
+      - name: Update collections
         env:
           GIT_LFS_SKIP_SMUDGE: "1"
         run: |
@@ -52,19 +51,30 @@ jobs:
           git submodule update --init --depth 1
           git submodule update --remote --depth 1
 
-      - name: Restore latest release index
+      - name: Commit collection updates
+        if: github.ref_type == 'branch'
+        run: |
+          if git diff --quiet --submodule=short; then
+            echo "No collection updates."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add collections .gitmodules
+          git commit -m "🤖 Update collection submodules"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Restore latest index
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p .qmd "${RUNNER_TEMP}/filoscope-release"
-          if gh release download --repo "$GITHUB_REPOSITORY" \
-            --pattern filoscope.sqlite.gz \
-            --dir "${RUNNER_TEMP}/filoscope-release" \
-            --clobber; then
-            gzip -dc "${RUNNER_TEMP}/filoscope-release/filoscope.sqlite.gz" > .qmd/index.sqlite
+          mkdir -p .qmd "${RUNNER_TEMP}/latest-index"
+          if gh release download --repo "$GITHUB_REPOSITORY" --pattern filoscope.sqlite.gz --dir "${RUNNER_TEMP}/latest-index" --clobber; then
+            gzip -dc "${RUNNER_TEMP}/latest-index/filoscope.sqlite.gz" > .qmd/index.sqlite
             test "$(sqlite3 .qmd/index.sqlite 'PRAGMA integrity_check;')" = "ok"
           else
-            echo "No previous release index found; starting from an empty index."
+            echo "No previous index found; starting from an empty index."
           fi
 
       - name: Build index
@@ -105,7 +115,7 @@ jobs:
           mkdir -p dist
           gzip -c .qmd/index.sqlite > dist/filoscope.sqlite.gz
 
-      - name: Verify index package
+      - name: Verify package
         env:
           QMD_FORCE_CPU: "1"
           XDG_CACHE_HOME: ${{ runner.temp }}/filoscope-cache
@@ -113,41 +123,44 @@ jobs:
         run: |
           mkdir -p "$XDG_CACHE_HOME/qmd"
           cp .qmd/index.sqlite "$XDG_CACHE_HOME/qmd/filoscope.sqlite"
-          printf 'workflow-local\n' > "$XDG_CACHE_HOME/qmd/filoscope.release-tag.txt"
-          node bin/filoscope.js status --format json > "${RUNNER_TEMP}/filoscope-status.json"
-          cat "${RUNNER_TEMP}/filoscope-status.json"
-          node --input-type=module - "${RUNNER_TEMP}/filoscope-status.json" <<'NODE'
-          import { readFileSync } from "node:fs";
-          const status = JSON.parse(readFileSync(process.argv[2], "utf8"));
-          if (status.needsEmbedding !== 0) {
-            throw new Error(`${status.needsEmbedding} documents still need embeddings`);
-          }
-          if (status.vectorCount === 0) {
-            throw new Error("Index has no vectors");
-          }
-          NODE
-          node bin/filoscope.js search 'FIP-0081' -c fips -n 1 --format json
-          npx qmd --index filoscope search 'FIP-0081' -c fips -n 1 --json
 
-      - name: Upload workflow artifact
+          node bin/filoscope.js status
+          node --input-type=module <<'NODE'
+          import { createStore } from "@tobilu/qmd";
+
+          const dbPath = `${process.env.XDG_CACHE_HOME}/qmd/filoscope.sqlite`;
+          const store = await createStore({ dbPath });
+          const status = await store.getStatus();
+          const vectorCount = store.internal.db.prepare("SELECT COUNT(*) AS count FROM content_vectors").get().count;
+          await store.close();
+
+          if (status.needsEmbedding !== 0) throw new Error(`${status.needsEmbedding} documents still need embeddings`);
+          if (vectorCount === 0) throw new Error("Index has no vectors");
+          NODE
+
+          node bin/filoscope.js search Filecoin -n 1 --format json > "${RUNNER_TEMP}/search.json"
+          node --input-type=module - "${RUNNER_TEMP}/search.json" <<'NODE'
+          import { readFileSync } from "node:fs";
+          const results = JSON.parse(readFileSync(process.argv[2], "utf8"));
+          if (!Array.isArray(results) || results.length === 0) throw new Error("Search returned no results");
+          NODE
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: filoscope.sqlite.gz
           path: dist/filoscope.sqlite.gz
           if-no-files-found: error
 
-      - name: Publish GitHub Release asset
+      - name: Publish release asset
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="index-$(date -u +%F)"
-          notes="Daily Filecoin ecosystem QMD index built from ${GITHUB_SHA}."
+          notes="Daily Filecoin index built from $(git rev-parse HEAD)."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz --clobber
             gh release edit "$tag" --latest
           else
-            gh release create "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz \
-              --title "$tag" \
-              --notes "$notes" \
-              --latest
+            gh release create "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz --title "$tag" --notes "$notes" --latest
           fi
