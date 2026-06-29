@@ -9,6 +9,11 @@ collections:
     pattern: "{**/*.{md,rs,sol,fe,eas,sh,toml,yml,yaml,json},**/Makefile,**/Dockerfile}"
     context:
       "/": Canonical Rust implementation of Filecoin built-in actors for FVM networks, covering actor state and methods, runtime utilities, test VM and integration tests, Wasm compilation, CARv1 manifests, storage miner, storage market, EVM actor, and release workflows.
+  curio:
+    path: collections/curio
+    pattern: "{**/*.{md,go,sql,sh,bash,py,template,tmpl,html,css,service,conf,toml,yml,yaml,json},**/Makefile,**/Dockerfile,**/go.mod,**/go.work}"
+    context:
+      "/": Go implementation of Filecoin Curio storage-provider software, covering sector sealing and proving, task scheduling, storage orchestration, deal and market workflows, APIs, CLI operations, configuration, deployment, monitoring, and integration tests.
   lotus:
     path: collections/lotus
     pattern: "{**/*.{md,go,sol,sql,sh,bash,py,asm,template,tmpl,html,css,service,conf,toml,yml,yaml,json},**/Makefile,**/Dockerfile,**/go.mod,GO_VERSION_MIN,scripts/bash-completion/lotus,scripts/zsh-completion/lotus,scripts/dev/drop-local-repos,scripts/dev/gen-daemon,scripts/dev/sminer-init,scripts/mkreleaselog}"
