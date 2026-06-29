@@ -8,8 +8,7 @@
   },
   "files": [
     "bin/",
-    "README.md",
-    "SPEC.md"
+    "README.md"
   ],
   "scripts": {
     "test": "node bin/filoscope.js --help"
