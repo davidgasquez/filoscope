@@ -144,6 +144,7 @@ jobs:
           notes="Daily Filecoin ecosystem QMD index built from ${GITHUB_SHA}."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz --clobber
+            gh release edit "$tag" --latest
           else
             gh release create "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz \
               --title "$tag" \
