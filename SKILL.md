@@ -91,3 +91,9 @@ npx -y filoscope@latest get '#abc123:40:80' --format md
 - Do not overuse semantic search when exact anchors exist.
 - Do not paste the user's sentence into bare `query` when you can write better `intent:`, `lex:`, and `vec:` fields.
 - Check `npx -y filoscope@latest status` when cache state, collection names, or index freshness matters.
+
+## Data
+
+If the user asks about data/metrics, read and apply the following skills:
+
+- [Filecoin Data Portal](https://filecoindataportal.xyz/SKILL.md). Use when the user asks about Filecoin Data Portal, open datasets, network metrics, KPIs, or entities like Clients, Filecoin Pay Rails, Providers, ...
