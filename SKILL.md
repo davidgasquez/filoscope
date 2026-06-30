@@ -14,7 +14,7 @@ Always:
 
 1. Search for candidate documents.
 2. Retrieve full source text with `get` or `multi-get`.
-3. Write a grounded Filecoin answer from retrieved text, citing docids/paths and line numbers.
+3. Write a grounded Filecoin answer from retrieved text, tracking docids/`qmd://` paths and exact line ranges during research.
 
 Do not answer from snippets alone when the user needs facts, decisions, quotes, APIs, specs, or nuance. Snippets are only leads.
 
@@ -25,13 +25,19 @@ npx -y filoscope search '"FIP-0081"' -c fips -n 5
 npx -y filoscope get '#4cb064:1:40'
 ```
 
-Final answers cite GitHub URLs, not `qmd://` paths, when a GitHub mapping exists. Use `qmd://` paths for retrieval, but use GitHub line links in final answers when a mapping exists. Convert citations with [`.gitmodules`](https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/.gitmodules) as the source of truth.
+Final answers cite GitHub line URLs when a source maps through [`.gitmodules`](https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/.gitmodules); otherwise cite the `qmd://` path and line range. Treat docids as retrieval handles, not preferred final citations.
+
+Map `qmd://` sources with `.gitmodules` as the source of truth:
+
+```bash
+git config -f .gitmodules --get-regexp '^submodule\..*\.(path|url)$' | paste - -
+```
 
 - `qmd://<collection>/<path>:<start>:<count>` becomes `<submodule-url>/blob/HEAD/<path>#L<start>-L<end>`
   - `qmd://filecoin-pay/README.md:90:14` → `https://github.com/FilOzone/filecoin-pay/blob/HEAD/README.md#L90-L103`
 - Compute `end = start + count - 1`.
 - Remove `.git` from the submodule URL.
-- `fdp` maps to `collections/filecoin-data-portal`; other collection names usually match their submodule path.
+- Match collections to submodule paths, usually `collections/<collection>`; `fdp` maps to `collections/filecoin-data-portal`.
 
 ## Pick the right search mode
 
@@ -71,7 +77,7 @@ npx -y filoscope multi-get 'fips/FIPS/*.md' -l 80 --format md
 ```
 
 `get` and `multi-get` are line-numbered by default. Cite the docid/path and exact lines. Use the `:from:count` suffix to read more context around a hit; do not pipe through `sed`, `head`, or `tail`.
-Use `get` for docids; use `multi-get` for qmd paths, globs, or comma-separated path patterns.
+Use `get` for one source: either a docid (`#abc123`) or one `qmd://...` path. Use `multi-get` for multiple sources: comma-separated paths, globs, or batches.
 
 Wrong:
 
@@ -121,3 +127,11 @@ npx -y filoscope --refresh-index
 - Do not lean on bare query expansion. Write `intent:`/`lex:`/`vec:`/`hyde:` when doing conceptual searches.
 - Do not overuse semantic search. Exact Filecoin terms, API names, FIPs, filenames, and symbols are often best found with `search`.
 - If `query`/`vsearch` fails due to local model/GPU issues, use `search` with stronger lexical terms.
+
+## Feedback
+
+If you find this skill confusing or something doesn't work, offer to open a GitHub issue:
+
+`https://github.com/davidgasquez/filoscope/issues/new`
+
+Draft the issue first, scrub secrets/PII, show it to the user, and submit only after approval.
