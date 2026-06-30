@@ -1,99 +1,119 @@
 ---
 name: filoscope
-description: Search and retrieve grounded Filecoin ecosystem context from the prebuilt filoscope QMD index. Use when users ask about Filecoin docs, FIPs/FRCs, Lotus, Forest, Lily, built-in actors, Filecoin Data Portal, Filecoin Pay, PDP, Synapse SDK, Filecoin services, PoRep Market, or other indexed Filecoin ecosystem code/docs and need source-backed answers.
+description: Search the Filecoin knowledge base with Filoscope. Use when users ask about Filecoin docs, FIPs, specs, code, ecosystem projects, datasets, or need grounded Filecoin answers.
+license: MIT
 ---
 
-# Filoscope
+# Filoscope 🔭
 
-Use `filoscope` before web search when the answer may be in Filecoin ecosystem docs or code. The workflow is:
+A Filecoin knowledge base built for your agents.
+
+Use Filoscope before web search when the answer may be in Filecoin docs, code, FIPs, specs, or ecosystem context. The goal is a **grounded Filecoin answer**: claims backed by retrieved Filoscope sources. Run it with `npx -y filoscope`; the prebuilt index downloads automatically on first use.
+
+## Workflow
+
+Always:
 
 1. Search for candidate documents.
-2. Retrieve source text with `get` or `multi-get`.
-3. Answer from retrieved text, citing paths, docids, and line numbers when available.
+2. Retrieve full source text with `get` or `multi-get`.
+3. Write a grounded Filecoin answer from retrieved text, citing docids/paths and line numbers.
 
-Do not answer from search snippets alone when the user needs facts, quotes, decisions, protocol behavior, or implementation details. Snippets are leads.
+Do not answer from snippets alone when the user needs facts, decisions, quotes, APIs, specs, or nuance. Snippets are only leads.
 
-## Commands
-
-Run through `npx -y filoscope@latest` unless a local binary is available. The `-y` is required so agents do not hang on npm's install prompt, and `@latest` makes npm resolve the current published package:
+Typical loop:
 
 ```bash
-npx -y filoscope@latest status
-npx -y filoscope@latest search '"FIP-0081"' -c fips -n 10
-npx -y filoscope@latest query "how does Filecoin storage power work"
-npx -y filoscope@latest get '#4cb064:1:40'
-npx -y filoscope@latest multi-get 'fips/FIPS/*.md' -l 80 --format md
+npx -y filoscope search '"FIP-0081"' -c fips -n 5
+npx -y filoscope get '#4cb064:1:40'
 ```
 
-The first command that needs the index downloads it automatically. Use `npx -y filoscope@latest pull --force` only when the user asks to refresh the cached index or the cache appears stale.
+When reporting retrieval, be specific and keep it compact. Link to the remote resource if possible (GitHub URL).
 
-## Pick The Search Mode
+## Pick the right search mode
 
-Use lexical search when you know exact terms, titles, identifiers, code symbols, error strings, FIP numbers, contract names, or rare phrases:
+Use lexical search when you know exact terms, titles, symbols, filenames, commands, APIs, or rare phrases:
 
 ```bash
-npx -y filoscope@latest search '"daily_network_activity_by_method"' -c fdp -n 10
-npx -y filoscope@latest search '"SubmitWindowedPoSt"' -c lotus -n 10
+npx -y filoscope search '"daily_network_activity_by_method"' -c fdp -n 10
+npx -y filoscope search '"Filecoin.AuthNew"' -n 10
+npx -y filoscope search '"FIP-0081"' -c fips -n 5
 ```
 
-Use structured `query` when the user describes an idea indirectly or the source may use different wording. Write the fields yourself:
+Use structured `query` for conceptual recall. Prefer writing the query fields yourself instead of relying on bare query expansion: you know the user's goal, Filecoin vocabulary, and nearby-but-wrong concepts to avoid.
 
 ```bash
-npx -y filoscope@latest query -c fdp $'intent: Find how a Filecoin Data Portal dataset is built, not user-facing docs.\nlex: raw model main materialize asset schema test\nvec: where the portal defines validates and publishes this dataset'
+npx -y filoscope query $'intent: Find how Filecoin storage power is computed and what commitments prove it. Avoid generic token power or governance usage.\nlex: storage power quality adjusted power sector commitment WindowPoSt WinningPoSt\nvec: how Filecoin miners prove storage and receive power in consensus\nhyde: Filecoin storage providers gain quality-adjusted power by committing sectors and proving ongoing storage with Proof-of-Spacetime, which influences consensus participation.'
 ```
 
-Field guidance:
+Structured query fields:
 
-- `intent:` states what to find and what to avoid.
-- `lex:` lists exact terms, aliases, titles, code symbols, and rare words.
-- `vec:` paraphrases the desired source in natural language.
-- `hyde:` describes the document or answer that would satisfy the request.
+- `intent:` what you are trying to find and what to avoid.
+- `lex:` exact terms, aliases, acronyms, commands, API names, and rare words.
+- `vec:` semantic paraphrase in natural language.
+- `hyde:` hypothetical answer/document passage that would satisfy the request.
 
-Prefer `intent:` plus `lex:` or `vec:`. If you only have one rare token or exact phrase, use `search`, not bare `query`.
+If you have one rare token or an exact phrase, use `search`, not bare `query`. If model-backed search is slow or fails, fall back to `search` with stronger lexical terms.
 
-Use `vsearch` only when semantic recall is needed and lexical terms are weak:
+## Retrieve sources
+
+Search results include docids like `#abc123` and `qmd://...` paths. Fetch them:
 
 ```bash
-npx -y filoscope@latest vsearch "how retrieval and payment settlement interact" -n 10
+npx -y filoscope get '#abc123'
+npx -y filoscope get '#abc123:120:40'
+npx -y filoscope get 'qmd://fips/FIPS/fip-0081.md:1:80'
+npx -y filoscope multi-get 'qmd://fips/FIPS/fip-0081.md,qmd://fips/FIPS/fip-0092.md' --format md
+npx -y filoscope multi-get 'fips/FIPS/*.md' -l 80 --format md
 ```
 
-If model-backed commands fail or are slow, fall back to `search` with stronger lexical terms.
+`get` and `multi-get` are line-numbered by default. Cite the docid/path and exact lines. Use the `:from:count` suffix to read more context around a hit; do not pipe through `sed`, `head`, or `tail`.
+Use `get` for docids; use `multi-get` for qmd paths, globs, or comma-separated path patterns.
 
-## Retrieve Sources
-
-Search results include docids like `#abc123` and display paths. Fetch the source before relying on it:
+Wrong:
 
 ```bash
-npx -y filoscope@latest get '#abc123'
-npx -y filoscope@latest get '#abc123:120:40'
-npx -y filoscope@latest get 'qmd://lotus/chain/types/blockheader.go:1:80'
-npx -y filoscope@latest multi-get '#abc123,#def456' --format md
-npx -y filoscope@latest multi-get 'filecoin-docs/**/*.md' -l 80 --format md
+npx -y filoscope get '#abc123' | sed -n '120,160p'
 ```
 
-Use the `:from:count` suffix to read around a hit. Prefer another `get` range over shell slicing, because `filoscope get` preserves docid lookup, paths, and line numbers.
-
-Use `multi-get` when comparing several hits or gathering adjacent context. Keep retrieval bounded with `-l` or `--max-bytes` when matching broad globs.
-
-## Output Formats
-
-Use `--format json` for machine parsing and `--format md` when you want compact markdown suitable for quoting or comparing multiple docs:
+Right:
 
 ```bash
-npx -y filoscope@latest search '"PieceCID"' -c synapse-sdk --format json
-npx -y filoscope@latest get '#abc123:40:80' --format md
+npx -y filoscope get '#abc123:120:40'
 ```
+
+Use `--no-line-numbers` only when you need raw text to copy verbatim. Use `--full-path` only when you need an on-disk path for an editor or file tool.
+
+## Discover what is indexed
+
+```bash
+npx -y filoscope status
+npx -y filoscope ls
+npx -y filoscope ls fips
+```
+
+Add collection filters when broad searches drift into the wrong corpus:
+
+```bash
+npx -y filoscope search '"FIP-0081"' -c fips -n 5
+npx -y filoscope query -c fdp $'intent: Find how an FDP dataset is built.\nlex: raw model materialize asset schema test\nvec: where the portal defines and validates this dataset'
+```
+
+Omit `-c` to search everything.
+
+## Useful commands
+
+```bash
+npx -y filoscope --help
+npx -y filoscope status
+npx -y filoscope --refresh-index
+```
+
+`--refresh-index` manually re-downloads the prebuilt Filecoin index.
 
 ## Pitfalls
 
-- Do not stop at snippets; fetch documents before making claims.
-- Do not mutate or refresh the cache unless needed for the task.
-- Do not overuse semantic search when exact anchors exist.
-- Do not paste the user's sentence into bare `query` when you can write better `intent:`, `lex:`, and `vec:` fields.
-- Check `npx -y filoscope@latest status` when cache state, collection names, or index freshness matters.
-
-## Data
-
-If the user asks about data/metrics, read and apply the following skills:
-
-- [Filecoin Data Portal](https://filecoindataportal.xyz/SKILL.md). Use when the user asks about Filecoin Data Portal, open datasets, network metrics, KPIs, or entities like Clients, Filecoin Pay Rails, Providers, ...
+- Do not stop at snippets. Fetch documents before making a grounded Filecoin answer.
+- Do not slice output with shell tools. Use `#docid:from:count` or `path:from:count`.
+- Do not lean on bare query expansion. Write `intent:`/`lex:`/`vec:`/`hyde:` when doing conceptual searches.
+- Do not overuse semantic search. Exact Filecoin terms, API names, FIPs, filenames, and symbols are often best found with `search`.
+- If `query`/`vsearch` fails due to local model/GPU issues, use `search` with stronger lexical terms.
