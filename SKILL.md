@@ -4,8 +4,6 @@ description: Search the Filecoin knowledge base with Filoscope. Use when users a
 license: MIT
 ---
 
-# Filoscope 🔭
-
 A Filecoin knowledge base built for your agents.
 
 Use Filoscope before web search when the answer may be in Filecoin docs, code, FIPs, specs, or ecosystem context. The goal is a **grounded Filecoin answer**: claims backed by retrieved Filoscope sources. Run it with `npx -y filoscope`; the prebuilt index downloads automatically on first use.
@@ -27,7 +25,13 @@ npx -y filoscope search '"FIP-0081"' -c fips -n 5
 npx -y filoscope get '#4cb064:1:40'
 ```
 
-When reporting retrieval, be specific and keep it compact. Link to the remote resource if possible (GitHub URL).
+Final answers cite GitHub URLs, not `qmd://` paths, when a GitHub mapping exists. Use `qmd://` paths for retrieval, but use GitHub line links in final answers when a mapping exists. Convert citations with [`.gitmodules`](https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/.gitmodules) as the source of truth.
+
+- `qmd://<collection>/<path>:<start>:<count>` becomes `<submodule-url>/blob/HEAD/<path>#L<start>-L<end>`
+  - `qmd://filecoin-pay/README.md:90:14` → `https://github.com/FilOzone/filecoin-pay/blob/HEAD/README.md#L90-L103`
+- Compute `end = start + count - 1`.
+- Remove `.git` from the submodule URL.
+- `fdp` maps to `collections/filecoin-data-portal`; other collection names usually match their submodule path.
 
 ## Pick the right search mode
 
