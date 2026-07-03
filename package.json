@@ -1,20 +1,33 @@
 {
   "name": "filoscope",
-  "version": "0.1.3",
-  "description": "Query a prebuilt Filecoin ecosystem QMD index.",
+  "version": "0.2.0",
+  "description": "Build and query a Filecoin ecosystem QMD knowledge base.",
   "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
   "bin": {
-    "filoscope": "bin/filoscope.js"
+    "filoscope": "src/cli.js"
   },
   "files": [
-    "bin/",
+    "collections/",
+    "scripts/",
+    "src/",
     "README.md"
   ],
   "scripts": {
-    "test": "node bin/filoscope.js --help"
+    "test": "node src/cli.js --help",
+    "sync": "node src/cli.js sync",
+    "qmd-config": "node src/cli.js qmd-config",
+    "index": "node src/cli.js index",
+    "status": "node src/cli.js status",
+    "clean": "rm -rf .filoscope .qmd/index.sqlite .qmd/index.sqlite-shm .qmd/index.sqlite-wal",
+    "release": "node src/cli.js cleanup && sqlite3 .qmd/index.sqlite 'PRAGMA wal_checkpoint(TRUNCATE); VACUUM;' && mkdir -p dist && gzip -c .qmd/index.sqlite > dist/filoscope.sqlite.gz"
   },
   "dependencies": {
-    "@tobilu/qmd": "2.5.3"
+    "@tobilu/qmd": "2.5.3",
+    "yaml": "2.9.0"
   },
   "engines": {
     "node": ">=22"

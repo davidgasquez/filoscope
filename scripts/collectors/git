@@ -1,0 +1,71 @@
+#!/usr/bin/env node
+
+import { mkdirSync, existsSync } from "node:fs";
+import { delimiter, dirname, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const args = process.argv.slice(2);
+if (args.length < 2 || args.includes("-h") || args.includes("--help")) {
+  console.error("Usage: git <repo-url> <path> [--ref <ref>] [--depth <n>]");
+  process.exit(args.length < 2 ? 1 : 0);
+}
+
+const repo = args[0];
+const target = resolve(args[1]);
+let ref;
+let depth = "1";
+
+for (let i = 2; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === "--ref") {
+    ref = args[++i];
+  } else if (arg.startsWith("--ref=")) {
+    ref = arg.slice("--ref=".length);
+  } else if (arg === "--depth") {
+    depth = args[++i];
+  } else if (arg.startsWith("--depth=")) {
+    depth = arg.slice("--depth=".length);
+  } else {
+    throw new Error(`Unknown argument: ${arg}`);
+  }
+}
+
+mkdirSync(dirname(target), { recursive: true });
+
+const collectorDir = dirname(fileURLToPath(import.meta.url));
+const env = {
+  ...process.env,
+  GIT_LFS_SKIP_SMUDGE: "1",
+  PATH: (process.env.PATH ?? "")
+    .split(delimiter)
+    .filter((entry) => resolve(entry || ".") !== collectorDir)
+    .join(delimiter),
+};
+
+if (!existsSync(`${target}/.git`)) {
+  const cloneArgs = ["clone", "--depth", depth];
+  if (ref) cloneArgs.push("--branch", ref);
+  cloneArgs.push(repo, target);
+  run("git", cloneArgs, { env });
+  process.exit(0);
+}
+
+run("git", ["-C", target, "remote", "set-url", "origin", repo], { env });
+
+if (ref) {
+  run("git", ["-C", target, "fetch", "--depth", depth, "origin", ref], { env });
+  run("git", ["-C", target, "checkout", "--force", "FETCH_HEAD"], { env });
+} else {
+  run("git", ["-C", target, "fetch", "--depth", depth, "origin"], { env });
+  run("git", ["-C", target, "remote", "set-head", "origin", "-a"], { env });
+  run("git", ["-C", target, "checkout", "--force", "--detach", "origin/HEAD"], { env });
+}
+
+run("git", ["-C", target, "clean", "-ffdx"], { env });
+
+function run(command, commandArgs, options = {}) {
+  const result = spawnSync(command, commandArgs, { stdio: "inherit", ...options });
+  if (result.error) throw result.error;
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
