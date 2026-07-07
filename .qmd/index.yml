@@ -39,6 +39,16 @@ collections:
     pattern: "{**/*.{md,mdx,ts,js,mjs,sh,json,toml,yml,yaml},**/Makefile}"
     context:
       "/": Documentation for Filecoin network concepts, storage and retrieval workflows, FVM and FEVM smart-contract development, Filecoin Onchain Cloud, Synapse SDK, storage-provider operations, networks, FIL assets, JSON-RPC APIs, built-in actors, and ecosystem tools.
+  filecoin-cloud:
+    path: collections/filecoin-cloud
+    pattern: "{**/*.{md,mdx,ts,tsx,js,mjs,css,json,jsonc,toml,yml,yaml},**/.npmrc,**/.nvmrc}"
+    context:
+      "/": Next.js website for Filecoin Onchain Cloud at filecoin.cloud, covering Warm Storage Service information, service-provider registry UI and filtering, PDP capabilities and reachability metadata, deployment addresses, ABI sync, structured data, SEO, and Synapse SDK integration checks.
+  filecoin-pin:
+    path: collections/filecoin-pin
+    pattern: "{**/*.{md,mdx,ts,tsx,js,mjs,json,jsonc,toml,yml,yaml,svg},**/AGENTS.md,**/.npmrc}"
+    context:
+      "/": TypeScript implementation of Filecoin Pin for persistent, verifiable IPFS content storage on Filecoin PDP, covering CLI commands, JavaScript library APIs, GitHub upload action, beta IPFS Pinning Service API server, Synapse SDK integration, CAR/UnixFS uploads, payment and session-key flows, provider selection, telemetry, docs, examples, and tests.
   fips:
     path: collections/fips
     pattern: "{**/*.{md,go,sh,py,ipynb,json,toml,yml,yaml},**/Makefile}"

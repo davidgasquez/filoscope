@@ -40,3 +40,9 @@
 [submodule "collections/dealbot"]
 	path = collections/dealbot
 	url = https://github.com/FilOzone/dealbot.git
+[submodule "collections/filecoin-cloud"]
+	path = collections/filecoin-cloud
+	url = https://github.com/FilOzone/filecoin-cloud.git
+[submodule "collections/filecoin-pin"]
+	path = collections/filecoin-pin
+	url = https://github.com/filecoin-project/filecoin-pin.git
