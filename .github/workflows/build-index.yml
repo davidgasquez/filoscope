@@ -33,6 +33,19 @@ jobs:
           sudo apt-get install -y sqlite3
           npm ci
 
+      - name: Install latest QMD from GitHub
+        run: |
+          qmd_dir="${RUNNER_TEMP}/qmd"
+          qmd_ref="e428df76bc0274d9e93eb7ca3e95673315c42e90"
+          git init --quiet "${qmd_dir}"
+          git -C "${qmd_dir}" fetch --depth 1 https://github.com/tobi/qmd.git "${qmd_ref}"
+          git -C "${qmd_dir}" checkout --detach FETCH_HEAD
+          npm install --prefix "${qmd_dir}"
+          npm run --prefix "${qmd_dir}" build
+          (cd "${qmd_dir}" && npm pack --silent --pack-destination "${RUNNER_TEMP}")
+          npm install --no-save --package-lock=false "${RUNNER_TEMP}/tobilu-qmd-2.6.3.tgz"
+          npm exec -- qmd embed --help | grep -F -- "--timeout <minutes>"
+
       - name: Test
         run: npm test
 
@@ -85,7 +98,7 @@ jobs:
               break
             fi
             echo "Embedding attempt ${attempt}: ${pending} documents pending."
-            npm exec -- qmd --index filoscope embed --chunk-strategy auto
+            npm exec -- qmd --index filoscope embed --chunk-strategy auto --timeout 300
           done
 
           npm exec -- qmd --index filoscope cleanup
@@ -114,7 +127,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: filoscope.sqlite.gz
+          name: filoscope-remakening.sqlite.gz
           path: dist/filoscope.sqlite.gz
           if-no-files-found: error
 
@@ -122,7 +135,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload latest-index dist/filoscope.sqlite.gz#filoscope.sqlite.gz --clobber
-          gh release edit latest-index \
-            --notes "Latest Filecoin index built from ${GITHUB_SHA}." \
-            --latest
+          gh release upload latest-index dist/filoscope.sqlite.gz#filoscope-remakening.sqlite.gz --clobber
