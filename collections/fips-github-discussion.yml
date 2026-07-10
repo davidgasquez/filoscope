@@ -1,5 +1,0 @@
-name: fips-github-discussion
-context: GitHub Discussions from filecoin-project/FIPs covering Filecoin Improvement Proposal design discussions, review feedback, implementation questions, accepted answers, comments, replies, and governance context.
-include:
-  - "**/*.md"
-sync: gh-discussions filecoin-project/FIPs "$COLLECTION_PATH"
