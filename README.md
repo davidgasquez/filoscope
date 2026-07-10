@@ -2,55 +2,54 @@
 
 A Filecoin knowledge base built for your agents.
 
-Filoscope syncs Filecoin sources into local filesystem collections, builds a QMD index, and exposes a simple search CLI. Published releases also include a prebuilt index, so agents can use it with zero setup.
+Filoscope bundles Filecoin docs, FIPs, specs, code, and ecosystem projects into a single searchable index. No setup needed!
 
 ## 🚀 Quick Start
 
-Ask your agent:
+Point your agent at the [Filoscope SKILL](https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/SKILL.md) and ask away.
 
-```text
-Read https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/SKILL.md and tell me how Filecoin Pay rails work
+```
+Read https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/SKILL.md and tell me how Filecoin Pay Rails work
 ```
 
-Or use the published index directly:
+### 🔎 CLI
+
+You can manually download the index.
 
 ```bash
-npx -y filoscope query "how does Filecoin storage power work"
-npx -y filoscope search '"FIP-0081"' -c fips -n 5
-npx -y filoscope get '#4cb064:1:40'
+npx filoscope pull
 ```
 
-The first search downloads the prebuilt Filecoin index automatically.
-
-## 🧱 Local index
-
-Each `collections/*.yml` file defines one QMD collection and the command that materializes it. The output folder is derived from `name`: `.filoscope/collections/<name>`.
+The downloaded database lives in a named `filoscope` index for [`qmd`](https://github.com/tobi/qmd). Search it from anywhere with `--index filoscope`.
 
 ```bash
-npm ci
-npm run sync                        # sync sources, update QMD, embed
-node src/cli.js query "..."          # query the local index
+npx qmd --index filoscope search 'FIP-0081' -c fips -n 5
+npx qmd --index filoscope query 'how do storage providers prove storage over time'
+npx qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
-Useful shortcuts:
+To build a project-local index from the sources, run these commands from the repository. `sync` materializes the collections and writes `.qmd/index.yml`, which QMD discovers automatically.
 
 ```bash
-npm run sync
-npm run index
-npm run status
+npx filoscope sync
+npx qmd update && npx qmd embed
 ```
 
-## 🧰 Commands
+## 📦 Developing
 
-```bash
-filoscope sync [collection...]      # run collection sync commands
-filoscope qmd-config                # generate QMD config from collections/*.yml
-filoscope index [collection...]     # sync, generate config, update, embed
-filoscope collections               # list collection definitions
-filoscope status
-filoscope --refresh-index
-filoscope --help
+Each collection is a YAML file in [`collections/`](collections/) pointing to a source repository. A [GitHub Action](.github/workflows/build-index.yml) syncs all collections daily, builds the [`qmd`](https://github.com/tobi/qmd) index, and publishes it as a release artifact.
+
+### 🛠️ Adding a collection
+
+Drop a YAML file in `collections/` with `source`, `context`, and `pattern`:
+
+```yaml
+source: github:filecoin-project/lotus
+context: Go implementation of Filecoin Lotus node, miner, worker, and gateway.
+pattern: "**/*.{md,go,sh,toml,json,yml,yaml}"
 ```
+
+Connectors are picked by the source scheme (`github:`, `github-discussion:`).
 
 ## 📜 License
 
