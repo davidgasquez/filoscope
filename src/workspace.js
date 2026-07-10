@@ -14,6 +14,10 @@ export function qmdIndexPath() {
   return path.join(cacheHome, "qmd", `${QMD_INDEX_NAME}.sqlite`);
 }
 
+export function qmdReleaseTagPath() {
+  return path.join(path.dirname(qmdIndexPath()), `${QMD_INDEX_NAME}.release-tag.txt`);
+}
+
 export function projectRoot(start = process.cwd()) {
   let current = path.resolve(start);
 

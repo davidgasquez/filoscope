@@ -28,10 +28,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3
-          npm ci
+        run: npm ci
 
       - name: Install latest QMD from GitHub
         run: |
@@ -56,83 +53,14 @@ jobs:
           key: qmd-models-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: qmd-models-${{ runner.os }}-
 
-      - name: Sync collections
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          npm run filoscope -- sync
-
-      - name: Restore latest index
+      - name: Pull latest published index
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p ~/.cache/qmd "${RUNNER_TEMP}/latest-index"
-          if gh release download latest-index --pattern filoscope.sqlite.gz --dir "${RUNNER_TEMP}/latest-index"; then
-            gzip -dc "${RUNNER_TEMP}/latest-index/filoscope.sqlite.gz" > ~/.cache/qmd/filoscope.sqlite
-            test "$(sqlite3 ~/.cache/qmd/filoscope.sqlite 'PRAGMA integrity_check;')" = "ok"
-          else
-            echo "No previous index found; building from scratch."
-          fi
+        run: npm run filoscope -- pull
 
-      - name: Build index
-        env:
-          QMD_FORCE_CPU: "1"
-        run: |
-          npm exec -- qmd --index filoscope update
-
-          pending_embeddings() {
-            node --input-type=module <<'NODE'
-          import { homedir } from "node:os";
-          import { join } from "node:path";
-          import { createStore } from "@tobilu/qmd";
-          const store = await createStore({ dbPath: join(homedir(), ".cache", "qmd", "filoscope.sqlite") });
-          const status = await store.getStatus();
-          await store.close();
-          console.log(status.needsEmbedding);
-          NODE
-          }
-
-          for attempt in 1 2 3 4 5 6 7 8; do
-            pending="$(pending_embeddings)"
-            if [ "$pending" = "0" ]; then
-              break
-            fi
-            echo "Embedding attempt ${attempt}: ${pending} documents pending."
-            npm exec -- qmd --index filoscope embed --chunk-strategy auto --timeout 300
-          done
-
-          npm exec -- qmd --index filoscope cleanup
-          pending="$(pending_embeddings)"
-          test "$pending" = "0" || { echo "::error::${pending} documents still need embeddings"; exit 1; }
-
-          sqlite3 ~/.cache/qmd/filoscope.sqlite 'PRAGMA wal_checkpoint(TRUNCATE); VACUUM;'
-          mkdir -p dist
-          gzip -c ~/.cache/qmd/filoscope.sqlite > dist/filoscope.sqlite.gz
-
-      - name: Verify index
-        env:
-          QMD_FORCE_CPU: "1"
-        run: |
-          test "$(sqlite3 ~/.cache/qmd/filoscope.sqlite 'PRAGMA integrity_check;')" = "ok"
-          gzip -t dist/filoscope.sqlite.gz
-          npm exec -- qmd --index filoscope search Filecoin -n 1 --format json > "${RUNNER_TEMP}/search.json"
-          node --input-type=module - "${RUNNER_TEMP}/search.json" <<'NODE'
-          import { readFileSync } from "node:fs";
-          const results = JSON.parse(readFileSync(process.argv[2], "utf8"));
-          if (!Array.isArray(results) || results.length === 0) {
-            throw new Error("Index search returned no results");
-          }
-          NODE
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: filoscope-remakening.sqlite.gz
-          path: dist/filoscope.sqlite.gz
-          if-no-files-found: error
-
-      - name: Publish release
+      - name: Build and publish index
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release upload latest-index dist/filoscope.sqlite.gz#filoscope-remakening.sqlite.gz --clobber
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          QMD_FORCE_CPU: "1"
+        run: npm run filoscope -- publish

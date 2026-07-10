@@ -9,6 +9,7 @@ Usage:
   filoscope sync [collection-name ...]
   filoscope config
   filoscope pull
+  filoscope publish
 `;
 
 async function main(argv) {
@@ -30,11 +31,27 @@ async function main(argv) {
       return;
     case "pull":
       if (args.length > 0) throw new Error("Usage: filoscope pull");
-      console.log(`Downloaded prebuilt index to ${await pullIndex()}`);
+      await pull();
+      return;
+    case "publish":
+      if (args.length > 0) throw new Error("Usage: filoscope publish");
+      const { preparePublish, publishIndex } = await import("./publish.js");
+      const target = await preparePublish();
+      await sync([]);
+      await publishIndex(target);
       return;
     default:
       throw new Error(`Unknown command: ${command}\n\n${usage.trim()}`);
   }
+}
+
+async function pull() {
+  const result = await pullIndex();
+  console.log(
+    result.updated
+      ? `Downloaded ${result.tag} to ${result.destination}`
+      : `Already up to date with ${result.tag} at ${result.destination}`,
+  );
 }
 
 async function sync(names) {

@@ -14,7 +14,7 @@ Read https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/SK
 
 ### 🔎 CLI
 
-You can manually download the index.
+You can manually update the index. Filoscope checks the latest release tag and downloads the database only when it has changed.
 
 ```bash
 npx filoscope pull
@@ -38,6 +38,12 @@ npx qmd update && npx qmd embed
 ## 📦 Developing
 
 Each collection is a YAML file in [`collections/`](collections/) pointing to a source repository. A [GitHub Action](.github/workflows/build-index.yml) syncs all collections daily, builds the [`qmd`](https://github.com/tobi/qmd) index, and publishes it as a release artifact.
+
+From a clean worktree with `HEAD` pushed to GitHub, run the same publish path locally:
+
+```bash
+GH_TOKEN="$(gh auth token)" npm run filoscope -- publish
+```
 
 ### 🛠️ Adding a collection
 

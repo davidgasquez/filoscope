@@ -1,0 +1,45 @@
+name: Prune Filoscope index releases
+
+on:
+  release:
+    types: [published]
+  workflow_run:
+    workflows: ["Build Filoscope index"]
+    types: [completed]
+  schedule:
+    - cron: "43 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prune-filoscope-index-releases
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    if: >-
+      (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'filoscope-index-')) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Keep seven newest index releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stale="$(
+            gh release list --repo "$GITHUB_REPOSITORY" --limit 1000 \
+              --exclude-drafts --exclude-pre-releases \
+              --json tagName,publishedAt \
+              --jq '[.[] | select(.tagName | test("^filoscope-index-[0-9]{8}T[0-9]{6}Z$"))] | sort_by(.publishedAt) | reverse | .[7:][] | .tagName'
+          )"
+
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            echo "Deleting ${tag}"
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+          done <<< "$stale"

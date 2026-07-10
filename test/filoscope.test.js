@@ -268,11 +268,98 @@ test("sync keeps connector progress separate from command output", async (t) => 
   assert.equal(stdout, `demo: 1 files\nGenerated ${qmdConfigFile(root)}\n`);
 });
 
-test("pull downloads and unpacks the prebuilt index", async (t) => {
+test("publish rejects arguments", async (t) => {
   const root = await fixture();
   t.after(() => fs.rm(root, { recursive: true, force: true }));
 
-  const server = createServer((request, response) => response.end(gzipSync("sqlite bytes")));
+  await assert.rejects(runCli(root, "publish", "unexpected"), (error) => {
+    assert.match(error.stderr, /Usage: filoscope publish/);
+    return true;
+  });
+});
+
+test("publish requires a GitHub token before syncing", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await writeCollection(root, "demo");
+  await writeConnector(root);
+  const env = xdgEnv(root);
+  delete env.GH_TOKEN;
+  delete env.GITHUB_TOKEN;
+
+  await assert.rejects(
+    execFileAsync(process.execPath, [cli, "publish"], {
+      cwd: root,
+      encoding: "utf8",
+      env,
+    }),
+    (error) => {
+      assert.match(error.stderr, /filoscope publish requires GH_TOKEN or GITHUB_TOKEN/);
+      return true;
+    },
+  );
+  await assert.rejects(fs.access(path.join(root, ".filoscope")), { code: "ENOENT" });
+});
+
+test("publish rejects a dirty worktree before syncing", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await writeCollection(root, "demo");
+  await writeConnector(root);
+  await execFileAsync("git", ["init", "--quiet"], { cwd: root });
+  await execFileAsync("git", ["add", "."], { cwd: root });
+  await execFileAsync(
+    "git",
+    [
+      "-c",
+      "user.name=Filoscope Test",
+      "-c",
+      "user.email=filoscope@example.com",
+      "commit",
+      "--quiet",
+      "-m",
+      "fixture",
+    ],
+    { cwd: root },
+  );
+  await fs.appendFile(path.join(root, "collections", "demo.yml"), "# dirty\n");
+  const env = { ...xdgEnv(root), GH_TOKEN: "test" };
+
+  await assert.rejects(
+    execFileAsync(process.execPath, [cli, "publish"], {
+      cwd: root,
+      encoding: "utf8",
+      env,
+    }),
+    (error) => {
+      assert.match(error.stderr, /filoscope publish requires a clean Git worktree/);
+      return true;
+    },
+  );
+  await assert.rejects(fs.access(path.join(root, ".filoscope")), { code: "ENOENT" });
+});
+
+test("pull skips the latest published index unless the database is missing", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  const tag = "filoscope-index-20260710T153012Z";
+  let assetDownloads = 0;
+  const server = createServer((request, response) => {
+    if (request.url === "/release") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({
+        tag_name: tag,
+        assets: [{
+          name: "filoscope.sqlite.gz",
+          browser_download_url: `http://127.0.0.1:${server.address().port}/filoscope.sqlite.gz`,
+        }],
+      }));
+      return;
+    }
+    assetDownloads++;
+    response.end(gzipSync("sqlite bytes"));
+  });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => server.close());
 
@@ -283,9 +370,63 @@ test("pull downloads and unpacks the prebuilt index", async (t) => {
     else process.env.XDG_CACHE_HOME = previousCacheHome;
   });
 
-  const url = `http://127.0.0.1:${server.address().port}/filoscope.sqlite.gz`;
-  const destination = await pullIndex(url);
+  const releaseUrl = `http://127.0.0.1:${server.address().port}/release`;
+  const first = await pullIndex(releaseUrl);
+  const second = await pullIndex(releaseUrl);
+  const destination = path.join(root, "xdg", "cache", "qmd", "filoscope.sqlite");
+  const tagPath = path.join(root, "xdg", "cache", "qmd", "filoscope.release-tag.txt");
 
-  assert.equal(destination, path.join(root, "xdg", "cache", "qmd", "filoscope.sqlite"));
+  assert.deepEqual(first, { destination, tag, updated: true });
+  assert.deepEqual(second, { destination, tag, updated: false });
+  assert.equal(assetDownloads, 1);
   assert.equal(await fs.readFile(destination, "utf8"), "sqlite bytes");
+  assert.equal(await fs.readFile(tagPath, "utf8"), `${tag}\n`);
+
+  await fs.rm(destination);
+  assert.deepEqual(await pullIndex(releaseUrl), { destination, tag, updated: true });
+  assert.equal(assetDownloads, 2);
+});
+
+test("failed pull preserves the current index and release tag", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+
+  const tag = "filoscope-index-20260710T153013Z";
+  const server = createServer((request, response) => {
+    if (request.url === "/release") {
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({
+        tag_name: tag,
+        assets: [{
+          name: "filoscope.sqlite.gz",
+          browser_download_url: `http://127.0.0.1:${server.address().port}/filoscope.sqlite.gz`,
+        }],
+      }));
+      return;
+    }
+    response.end("not gzip");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => server.close());
+
+  const previousCacheHome = process.env.XDG_CACHE_HOME;
+  process.env.XDG_CACHE_HOME = path.join(root, "xdg", "cache");
+  t.after(() => {
+    if (previousCacheHome === undefined) delete process.env.XDG_CACHE_HOME;
+    else process.env.XDG_CACHE_HOME = previousCacheHome;
+  });
+
+  const cache = path.join(root, "xdg", "cache", "qmd");
+  const destination = path.join(cache, "filoscope.sqlite");
+  const tagPath = path.join(cache, "filoscope.release-tag.txt");
+  await writeFile(cache, "filoscope.sqlite", "current index");
+  await writeFile(cache, "filoscope.release-tag.txt", "filoscope-index-20260710T153012Z\n");
+
+  await assert.rejects(
+    pullIndex(`http://127.0.0.1:${server.address().port}/release`),
+  );
+  assert.equal(await fs.readFile(destination, "utf8"), "current index");
+  assert.equal(await fs.readFile(tagPath, "utf8"), "filoscope-index-20260710T153012Z\n");
+  await assert.rejects(fs.access(`${destination}.tmp`), { code: "ENOENT" });
+  await assert.rejects(fs.access(`${tagPath}.tmp`), { code: "ENOENT" });
 });
