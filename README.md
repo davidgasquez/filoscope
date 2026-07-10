@@ -28,7 +28,7 @@ npx qmd --index filoscope query 'how do storage providers prove storage over tim
 npx qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
-To build a project-local index from the sources, run these commands from the repository. `sync` materializes the collections and writes `.qmd/index.yml`, which QMD discovers automatically.
+To build a project-local index from the sources, run these commands from the repository. The `sync` command materializes the collections and writes `.qmd/index.yml`, which `qmd` discovers automatically.
 
 ```bash
 npx filoscope sync
