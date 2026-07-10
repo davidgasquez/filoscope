@@ -1,5 +1,4 @@
 .env
 .filoscope/
 .qmd/
-dist/
 node_modules/
