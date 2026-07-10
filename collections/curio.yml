@@ -1,0 +1,3 @@
+source: github:filecoin-project/curio
+context: Go implementation of Filecoin Curio storage-provider software, covering sector sealing and proving, task scheduling, storage orchestration, deal and market workflows, APIs, CLI operations, configuration, deployment, monitoring, and integration tests.
+pattern: "**/*.{md,go,sh,sql,toml,json,yml,yaml}"
