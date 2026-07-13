@@ -4,6 +4,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { createGunzip } from "node:zlib";
+import { createStore } from "@tobilu/qmd";
 import { qmdIndexPath, qmdReleaseTagPath } from "./workspace.js";
 
 const ASSET_NAME = "filoscope.sqlite.gz";
@@ -30,11 +31,14 @@ export async function pullIndex(releaseUrl = RELEASE_URL) {
 
   const staged = `${destination}.tmp`;
   const stagedTag = `${tagPath}.tmp`;
+  const stagedFiles = [staged, stagedTag, `${staged}-wal`, `${staged}-shm`];
   try {
     await pipeline(Readable.fromWeb(response.body), createGunzip(), createWriteStream(staged));
+    await validateIndex(staged);
+    await Promise.all([`${staged}-wal`, `${staged}-shm`].map((file) => fs.rm(file, { force: true })));
     await fs.writeFile(stagedTag, `${release.tag}\n`);
   } catch (error) {
-    await Promise.all([staged, stagedTag].map((file) => fs.rm(file, { force: true })));
+    await Promise.all(stagedFiles.map((file) => fs.rm(file, { force: true })));
     throw error;
   }
 
@@ -80,6 +84,20 @@ async function latestRelease(url) {
   }
 
   return { tag: release.tag_name, assetUrl: asset.browser_download_url };
+}
+
+async function validateIndex(file) {
+  const store = await createStore({ dbPath: file });
+  try {
+    const status = await store.getStatus();
+    if (status.totalDocuments === 0) throw new Error("Downloaded QMD index contains no documents");
+    const integrity = store.internal.db.pragma("integrity_check", { simple: true });
+    if (integrity !== "ok") throw new Error(`Downloaded QMD index integrity check failed: ${integrity}`);
+    const [checkpoint] = store.internal.db.pragma("wal_checkpoint(TRUNCATE)");
+    if (checkpoint.busy !== 0) throw new Error("Downloaded QMD index could not be checkpointed");
+  } finally {
+    await store.close();
+  }
 }
 
 async function readOptional(file) {

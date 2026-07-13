@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import test from "node:test";
 import { createServer } from "node:http";
 import { gzipSync } from "node:zlib";
+import { createStore } from "@tobilu/qmd";
 import YAML from "yaml";
 import { pullIndex } from "../src/pull.js";
 
@@ -73,6 +74,16 @@ async function writeConnector(root, contents = materializingConnector) {
 async function writeFile(directory, name, contents = name) {
   await fs.mkdir(directory, { recursive: true });
   await fs.writeFile(path.join(directory, name), contents);
+}
+
+async function qmdIndexGzip(root) {
+  const dbPath = path.join(root, "release.sqlite");
+  const store = await createStore({ dbPath });
+  const now = new Date().toISOString();
+  store.internal.insertContent("test-hash", "Filecoin test document", now);
+  store.internal.insertDocument("test", "document.md", "Test", "test-hash", now, now);
+  await store.close();
+  return gzipSync(await fs.readFile(dbPath));
 }
 
 test("config generates QMD collections from the current manifest schema", async (t) => {
@@ -364,6 +375,7 @@ test("pull skips the latest published index unless the database is missing", asy
   t.after(() => fs.rm(root, { recursive: true, force: true }));
 
   const tag = "filoscope-index-20260710T153012Z";
+  const artifact = await qmdIndexGzip(root);
   let assetDownloads = 0;
   const server = createServer((request, response) => {
     if (request.url === "/release") {
@@ -378,7 +390,7 @@ test("pull skips the latest published index unless the database is missing", asy
       return;
     }
     assetDownloads++;
-    response.end(gzipSync("sqlite bytes"));
+    response.end(artifact);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => server.close());
@@ -399,7 +411,7 @@ test("pull skips the latest published index unless the database is missing", asy
   assert.deepEqual(first, { destination, tag, updated: true });
   assert.deepEqual(second, { destination, tag, updated: false });
   assert.equal(assetDownloads, 1);
-  assert.equal(await fs.readFile(destination, "utf8"), "sqlite bytes");
+  assert.equal((await fs.readFile(destination)).subarray(0, 15).toString(), "SQLite format 3");
   assert.equal(await fs.readFile(tagPath, "utf8"), `${tag}\n`);
 
   await fs.rm(destination);
@@ -407,7 +419,7 @@ test("pull skips the latest published index unless the database is missing", asy
   assert.equal(assetDownloads, 2);
 });
 
-test("failed pull preserves the current index and release tag", async (t) => {
+test("pull rejects an invalid database and preserves the current index and release tag", async (t) => {
   const root = await fixture();
   t.after(() => fs.rm(root, { recursive: true, force: true }));
 
@@ -424,7 +436,7 @@ test("failed pull preserves the current index and release tag", async (t) => {
       }));
       return;
     }
-    response.end("not gzip");
+    response.end(gzipSync("not a SQLite database"));
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => server.close());
