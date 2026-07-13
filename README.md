@@ -23,16 +23,16 @@ npx filoscope pull
 The downloaded database lives in a named `filoscope` index for [`qmd`](https://github.com/tobi/qmd). Search it from anywhere with `--index filoscope`.
 
 ```bash
-npx qmd --index filoscope search 'FIP-0081' -c fips -n 5
-npx qmd --index filoscope query 'how do storage providers prove storage over time'
-npx qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
+npx --package filoscope qmd --index filoscope search 'FIP-0081' -c fips -n 5
+npx --package filoscope qmd --index filoscope query 'how do storage providers prove storage over time'
+npx --package filoscope qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
 To build an index from the sources, run these commands from the repository. The `sync` command materializes the collections and generates the named `filoscope` QMD config. A GitHub token is required to export FIP discussions.
 
 ```bash
 GH_TOKEN="$(gh auth token)" npx filoscope sync
-npx qmd --index filoscope update && npx qmd --index filoscope embed
+npm exec -- qmd --index filoscope update && npm exec -- qmd --index filoscope embed
 ```
 
 ## 📦 Developing
