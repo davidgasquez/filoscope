@@ -1,3 +1,3 @@
 source: github:FilOzone/synapse-sdk
 context: TypeScript and JavaScript monorepo and docs for Synapse SDK, Core, and React packages integrating Filecoin Onchain Cloud storage, Filecoin Pay, Warm Storage, PDP verification, provider discovery, PieceCID handling, session keys, examples, and playground apps.
-pattern: "**/*.{md,ts,tsx,js,json,yml,yaml}"
+pattern: "**/*.{md,mdx,ts,tsx,js,json,yml,yaml}"
