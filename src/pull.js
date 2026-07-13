@@ -9,7 +9,7 @@ import { qmdIndexPath, qmdReleaseTagPath } from "./workspace.js";
 
 const ASSET_NAME = "filoscope.sqlite.gz";
 const RELEASE_URL =
-  "https://api.github.com/repos/davidgasquez/filoscope/releases/latest";
+  "https://api.github.com/repos/davidgasquez/filoscope/releases?per_page=100";
 
 export async function pullIndex(releaseUrl = RELEASE_URL) {
   const destination = qmdIndexPath();
@@ -66,24 +66,18 @@ async function latestRelease(url) {
     throw new Error(`Failed to get the latest Filoscope index (${response.status} ${response.statusText}): ${url}`);
   }
 
-  const release = await response.json();
-  if (
-    !release
-    || typeof release !== "object"
-    || Array.isArray(release)
-    || typeof release.tag_name !== "string"
-    || release.tag_name === ""
-  ) {
-    throw new Error("GitHub latest release response is invalid");
+  const releases = await response.json();
+  if (!Array.isArray(releases)) throw new Error("GitHub releases response is invalid");
+  for (const release of releases) {
+    if (!release?.tag_name?.startsWith("filoscope-index-")) continue;
+    const asset = Array.isArray(release.assets)
+      ? release.assets.find((candidate) => candidate.name === ASSET_NAME)
+      : undefined;
+    if (asset?.browser_download_url) {
+      return { tag: release.tag_name, assetUrl: asset.browser_download_url };
+    }
   }
-  const asset = Array.isArray(release.assets)
-    ? release.assets.find((candidate) => candidate.name === ASSET_NAME)
-    : undefined;
-  if (!asset?.browser_download_url) {
-    throw new Error(`Latest release ${release.tag_name} has no ${ASSET_NAME} asset`);
-  }
-
-  return { tag: release.tag_name, assetUrl: asset.browser_download_url };
+  throw new Error(`No published Filoscope index release has a ${ASSET_NAME} asset`);
 }
 
 async function validateIndex(file) {

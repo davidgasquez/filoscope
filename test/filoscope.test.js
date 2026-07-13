@@ -397,13 +397,16 @@ test("pull skips the latest published index unless the database is missing", asy
   const server = createServer((request, response) => {
     if (request.url === "/release") {
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify({
-        tag_name: tag,
-        assets: [{
-          name: "filoscope.sqlite.gz",
-          browser_download_url: `http://127.0.0.1:${server.address().port}/filoscope.sqlite.gz`,
-        }],
-      }));
+      response.end(JSON.stringify([
+        { tag_name: "qmd-2.6.3", assets: [] },
+        {
+          tag_name: tag,
+          assets: [{
+            name: "filoscope.sqlite.gz",
+            browser_download_url: `http://127.0.0.1:${server.address().port}/filoscope.sqlite.gz`,
+          }],
+        },
+      ]));
       return;
     }
     assetDownloads++;
@@ -444,13 +447,13 @@ test("pull rejects an invalid database and preserves the current index and relea
   const server = createServer((request, response) => {
     if (request.url === "/release") {
       response.setHeader("content-type", "application/json");
-      response.end(JSON.stringify({
+      response.end(JSON.stringify([{
         tag_name: tag,
         assets: [{
           name: "filoscope.sqlite.gz",
           browser_download_url: `http://127.0.0.1:${server.address().port}/filoscope.sqlite.gz`,
         }],
-      }));
+      }]));
       return;
     }
     response.end(gzipSync("not a SQLite database"));
