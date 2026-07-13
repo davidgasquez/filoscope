@@ -9,6 +9,13 @@ export async function syncCollections(collections, names) {
   const selected = fullSync
     ? collections
     : collections.filter((collection) => names.includes(collection.name));
+  if (
+    selected.some((collection) => collection.scheme === "github-discussion")
+    && !process.env.GITHUB_TOKEN
+    && !process.env.GH_TOKEN
+  ) {
+    throw new Error("GITHUB_TOKEN or GH_TOKEN is required to sync GitHub discussions");
+  }
   const results = [];
 
   for (const [index, collection] of selected.entries()) {

@@ -254,6 +254,26 @@ test("failed full sync keeps completed updates and preserves the failed collecti
   assert.deepEqual(await fs.readdir(path.join(materialized, "beta")), ["old-beta.md"]);
 });
 
+test("sync checks GitHub discussion authentication before materializing collections", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await writeConnector(root);
+  await writeCollection(root, "alpha");
+  await writeCollection(root, "discussions", { source: "github-discussion:owner/repo" });
+  const env = xdgEnv(root);
+  delete env.GITHUB_TOKEN;
+  delete env.GH_TOKEN;
+
+  await assert.rejects(
+    execFileAsync(process.execPath, [cli, "sync"], { cwd: root, encoding: "utf8", env }),
+    (error) => {
+      assert.match(error.stderr, /GITHUB_TOKEN or GH_TOKEN is required to sync GitHub discussions/);
+      return true;
+    },
+  );
+  await assert.rejects(fs.access(path.join(root, ".filoscope")), { code: "ENOENT" });
+});
+
 test("sync keeps connector progress separate from command output", async (t) => {
   const root = await fixture();
   t.after(() => fs.rm(root, { recursive: true, force: true }));

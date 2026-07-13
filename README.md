@@ -28,11 +28,11 @@ npx qmd --index filoscope query 'how do storage providers prove storage over tim
 npx qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
-To build a project-local index from the sources, run these commands from the repository. The `sync` command materializes the collections and writes `.qmd/index.yml`, which `qmd` discovers automatically.
+To build an index from the sources, run these commands from the repository. The `sync` command materializes the collections and generates the named `filoscope` QMD config. A GitHub token is required to export FIP discussions.
 
 ```bash
-npx filoscope sync
-npx qmd update && npx qmd embed
+GH_TOKEN="$(gh auth token)" npx filoscope sync
+npx qmd --index filoscope update && npx qmd --index filoscope embed
 ```
 
 ## 📦 Developing
