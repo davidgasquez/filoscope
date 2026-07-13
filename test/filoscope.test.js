@@ -36,11 +36,12 @@ async function fixture() {
   return root;
 }
 
-function xdgEnv(root) {
+function xdgEnv(root, overrides = {}) {
   return {
     ...process.env,
     XDG_CONFIG_HOME: path.join(root, "xdg", "config"),
     XDG_CACHE_HOME: path.join(root, "xdg", "cache"),
+    ...overrides,
   };
 }
 
@@ -107,6 +108,22 @@ test("config generates QMD collections from the current manifest schema", async 
       },
     },
   });
+});
+
+test("config respects QMD_CONFIG_DIR", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await writeCollection(root, "demo");
+  const configDir = path.join(root, "custom-qmd-config");
+
+  await execFileAsync(process.execPath, [cli, "config"], {
+    cwd: root,
+    encoding: "utf8",
+    env: xdgEnv(root, { QMD_CONFIG_DIR: configDir }),
+  });
+
+  const generated = YAML.parse(await fs.readFile(path.join(configDir, "filoscope.yml"), "utf8"));
+  assert.equal(generated.collections.demo.context["/"], "demo source");
 });
 
 test("config rejects manifests outside the current schema", async (t) => {

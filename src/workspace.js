@@ -6,7 +6,8 @@ export const QMD_INDEX_NAME = "filoscope";
 
 export function qmdConfigPath() {
   const configHome = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
-  return path.join(configHome, "qmd", `${QMD_INDEX_NAME}.yml`);
+  const configDir = process.env.QMD_CONFIG_DIR || path.join(configHome, "qmd");
+  return path.join(configDir, `${QMD_INDEX_NAME}.yml`);
 }
 
 export function qmdIndexPath() {
