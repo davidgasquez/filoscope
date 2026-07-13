@@ -18,7 +18,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@tobilu/qmd": "^2.5.3",
+    "@tobilu/qmd": "https://github.com/davidgasquez/filoscope/releases/download/qmd-2.6.3-e428df7/tobilu-qmd-2.6.3.tgz",
     "tar": "^7.5.19",
     "yaml": "^2.9.0"
   },

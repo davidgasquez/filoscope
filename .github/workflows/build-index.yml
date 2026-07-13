@@ -30,17 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install latest QMD from GitHub
+      - name: Verify QMD
         run: |
-          qmd_dir="${RUNNER_TEMP}/qmd"
-          qmd_ref="e428df76bc0274d9e93eb7ca3e95673315c42e90"
-          git init --quiet "${qmd_dir}"
-          git -C "${qmd_dir}" fetch --depth 1 https://github.com/tobi/qmd.git "${qmd_ref}"
-          git -C "${qmd_dir}" checkout --detach FETCH_HEAD
-          npm install --prefix "${qmd_dir}"
-          npm run --prefix "${qmd_dir}" build
-          (cd "${qmd_dir}" && npm pack --silent --pack-destination "${RUNNER_TEMP}")
-          npm install --no-save --package-lock=false "${RUNNER_TEMP}/tobilu-qmd-2.6.3.tgz"
+          npm ls @tobilu/qmd --depth=0 | grep -F -- "@tobilu/qmd@2.6.3"
           npm exec -- qmd embed --help | grep -F -- "--timeout <minutes>"
 
       - name: Test
