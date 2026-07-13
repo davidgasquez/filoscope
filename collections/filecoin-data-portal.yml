@@ -1,0 +1,3 @@
+source: github:davidgasquez/filecoin-data-portal
+context: Filecoin Data Portal codebase for a local-first DuckDB and Python pipeline indexing Filecoin datasets, asset metadata, tests, docs, and web publishing for network metrics, providers, clients, verified claims, DataCap, FEVM logs, Filecoin Pay, PDP, and warm storage.
+pattern: "**/*.{md,py,sql,ts,json,toml,yml,yaml}"

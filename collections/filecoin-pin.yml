@@ -1,0 +1,3 @@
+source: github:filecoin-project/filecoin-pin
+context: TypeScript implementation of Filecoin Pin for persistent, verifiable IPFS content storage on Filecoin PDP, covering CLI commands, JavaScript library APIs, GitHub upload action, beta IPFS Pinning Service API server, Synapse SDK integration, CAR/UnixFS uploads, payment and session-key flows, provider selection, telemetry, docs, examples, and tests.
+pattern: "**/*.{md,ts,js,json,yml,yaml}"

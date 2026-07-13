@@ -1,0 +1,3 @@
+source: github:filecoin-project/lily
+context: Instrumented Lotus-based Filecoin indexer source covering chain walking, tipset watching, actor state extraction, messages, receipts, gas economics, FEVM transactions, traces, contracts, TimescaleDB schemas and migrations, CSV storage, network surveys, and deployment operations tooling.
+pattern: "**/*.{md,go,sql,sh,toml,json,yml,yaml}"

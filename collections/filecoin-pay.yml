@@ -1,0 +1,3 @@
+source: github:FilOzone/filecoin-pay
+context: Solidity and Foundry implementation and documentation for FilecoinPayV1 payment rails on Filecoin, covering ERC20 and FIL account funding, operator approvals, lockup accounting, rate changes, one-time payments, validator arbitration, settlement, termination, fees, deployments, audits, and tests.
+pattern: "**/*.{md,sol,sh,json,toml,yml,yaml}"

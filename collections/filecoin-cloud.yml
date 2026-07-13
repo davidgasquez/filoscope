@@ -1,0 +1,3 @@
+source: github:FilOzone/filecoin-cloud
+context: Next.js website for Filecoin Onchain Cloud at filecoin.cloud, covering Warm Storage Service information, service-provider registry UI and filtering, PDP capabilities and reachability metadata, deployment addresses, ABI sync, structured data, SEO, and Synapse SDK integration checks.
+pattern: "**/*.{md,ts,tsx,js,json,yml,yaml}"

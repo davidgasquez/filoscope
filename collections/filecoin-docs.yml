@@ -1,0 +1,3 @@
+source: github:filecoin-project/filecoin-docs
+context: Documentation for Filecoin network concepts, storage and retrieval workflows, FVM and FEVM smart-contract development, Filecoin Onchain Cloud, Synapse SDK, storage-provider operations, networks, FIL assets, JSON-RPC APIs, built-in actors, and ecosystem tools.
+pattern: "**/*.{md,mdx,json,yml,yaml}"

@@ -20,9 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          submodules: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -31,136 +28,31 @@ jobs:
           cache: npm
 
       - name: Install dependencies
+        run: npm ci
+
+      - name: Verify QMD
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sqlite3
-          npm ci
+          npm ls @tobilu/qmd --depth=0 | grep -F -- "@tobilu/qmd@2.6.3"
+          npm exec -- qmd embed --help | grep -F -- "--timeout <minutes>"
+
+      - name: Test
+        run: npm test
 
       - name: Cache QMD models
         uses: actions/cache@v4
         with:
           path: ~/.cache/qmd/models
-          key: qmd-models-${{ runner.os }}-${{ hashFiles('.qmd/index.yml', 'package-lock.json') }}
+          key: qmd-models-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: qmd-models-${{ runner.os }}-
 
-      - name: Update collections
-        env:
-          GIT_LFS_SKIP_SMUDGE: "1"
-        run: |
-          git submodule sync
-          git submodule update --init --depth 1
-          git submodule update --remote --depth 1
-
-      - name: Commit collection updates
-        if: github.ref_type == 'branch'
-        run: |
-          if git diff --quiet --submodule=short; then
-            echo "No collection updates."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add collections .gitmodules
-          git commit -m "🤖 Update collection submodules"
-          git push origin "HEAD:${GITHUB_REF_NAME}"
-
-      - name: Restore latest index
+      - name: Pull latest published index
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          mkdir -p .qmd "${RUNNER_TEMP}/latest-index"
-          if gh release download --repo "$GITHUB_REPOSITORY" --pattern filoscope.sqlite.gz --dir "${RUNNER_TEMP}/latest-index" --clobber; then
-            gzip -dc "${RUNNER_TEMP}/latest-index/filoscope.sqlite.gz" > .qmd/index.sqlite
-            test "$(sqlite3 .qmd/index.sqlite 'PRAGMA integrity_check;')" = "ok"
-          else
-            echo "No previous index found; starting from an empty index."
-          fi
+        run: npm run filoscope -- pull
 
-      - name: Build index
-        env:
-          QMD_FORCE_CPU: "1"
-        run: |
-          npx qmd update
-
-          pending_embeddings() {
-            node --input-type=module <<'NODE'
-          import { createStore } from "@tobilu/qmd";
-          const store = await createStore({ dbPath: ".qmd/index.sqlite" });
-          const status = await store.getStatus();
-          await store.close();
-          console.log(status.needsEmbedding);
-          NODE
-          }
-
-          for attempt in 1 2 3 4 5 6 7 8; do
-            pending="$(pending_embeddings)"
-            if [ "$pending" = "0" ]; then
-              break
-            fi
-
-            echo "Embedding attempt ${attempt}: ${pending} documents need embeddings."
-            npx qmd embed --chunk-strategy auto
-          done
-
-          npx qmd cleanup
-
-          pending="$(pending_embeddings)"
-          if [ "$pending" != "0" ]; then
-            echo "::error::${pending} documents still need embeddings."
-            exit 1
-          fi
-
-          sqlite3 .qmd/index.sqlite 'PRAGMA wal_checkpoint(TRUNCATE); VACUUM;'
-          mkdir -p dist
-          gzip -c .qmd/index.sqlite > dist/filoscope.sqlite.gz
-
-      - name: Verify package
-        env:
-          QMD_FORCE_CPU: "1"
-          XDG_CACHE_HOME: ${{ runner.temp }}/filoscope-cache
-          XDG_CONFIG_HOME: ${{ runner.temp }}/filoscope-config
-        run: |
-          mkdir -p "$XDG_CACHE_HOME/qmd"
-          cp .qmd/index.sqlite "$XDG_CACHE_HOME/qmd/filoscope.sqlite"
-
-          npx qmd --index filoscope status
-          node --input-type=module <<'NODE'
-          import { createStore } from "@tobilu/qmd";
-
-          const dbPath = `${process.env.XDG_CACHE_HOME}/qmd/filoscope.sqlite`;
-          const store = await createStore({ dbPath });
-          const status = await store.getStatus();
-          const vectorCount = store.internal.db.prepare("SELECT COUNT(*) AS count FROM content_vectors").get().count;
-          await store.close();
-
-          if (status.needsEmbedding !== 0) throw new Error(`${status.needsEmbedding} documents still need embeddings`);
-          if (vectorCount === 0) throw new Error("Index has no vectors");
-          NODE
-
-          npx qmd --index filoscope search Filecoin -n 1 --format json > "${RUNNER_TEMP}/search.json"
-          node --input-type=module - "${RUNNER_TEMP}/search.json" <<'NODE'
-          import { readFileSync } from "node:fs";
-          const results = JSON.parse(readFileSync(process.argv[2], "utf8"));
-          if (!Array.isArray(results) || results.length === 0) throw new Error("Search returned no results");
-          NODE
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: filoscope.sqlite.gz
-          path: dist/filoscope.sqlite.gz
-          if-no-files-found: error
-
-      - name: Publish release asset
+      - name: Build and publish index
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          tag="index-$(date -u +%F)"
-          notes="Daily Filecoin index built from $(git rev-parse HEAD)."
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz --clobber
-            gh release edit "$tag" --latest
-          else
-            gh release create "$tag" dist/filoscope.sqlite.gz#filoscope.sqlite.gz --title "$tag" --notes "$notes" --latest
-          fi
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          QMD_FORCE_CPU: "1"
+        run: npm run filoscope -- publish

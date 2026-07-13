@@ -1,0 +1,3 @@
+source: github:filecoin-project/FIPs
+context: Filecoin Improvement Proposal records covering FIPs and FRCs for protocol changes, governance process, standards, network upgrades, storage-market economics, FVM and FEVM behavior, consensus, proofs, node APIs, and proposal lifecycle metadata from draft through final.
+pattern: "**/*.{md,txt,json,yml,yaml}"

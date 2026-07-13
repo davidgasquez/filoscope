@@ -1,0 +1,3 @@
+source: github:filecoin-project/builtin-actors
+context: Canonical Rust implementation of Filecoin built-in actors for FVM networks, covering actor state and methods, runtime utilities, test VM and integration tests, Wasm compilation, CARv1 manifests, storage miner, storage market, EVM actor, and release workflows.
+pattern: "**/*.{md,rs,toml,json,yml,yaml,sh}"
