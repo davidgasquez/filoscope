@@ -7,17 +7,17 @@ license: MIT
 Pull the current prebuilt index.
 
 ```bash
-npx filoscope pull
+npx -y --allow-remote=all filoscope pull
 ```
 
-Run `npx qmd skill show` and follow its search and retrieval workflow.
-Use `qmd` directly, adding `--index filoscope` to its search, query, and retrieval commands.
+Run `npx -y --allow-remote=all -p filoscope qmd skill show` and follow its search and retrieval workflow.
+Invoke the bundled `qmd` CLI with `npx -y --allow-remote=all -p filoscope qmd`.
 
 For example:
 
 ```bash
-npx qmd --index filoscope search 'FIP-0081' -c fips -n 5
-npx qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
+npx -y --allow-remote=all -p filoscope qmd --index filoscope search 'FIP-0081' -c fips -n 5
+npx -y --allow-remote=all -p filoscope qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
 ## Rules
