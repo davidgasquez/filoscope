@@ -4,7 +4,7 @@ description: Use and search Filecoin knowledge base with `qmd`. Use when answeri
 license: MIT
 ---
 
-Pull the current prebuilt index.
+Pull or update the current prebuilt index.
 
 ```bash
 npx -y --allow-remote=all filoscope pull
@@ -24,8 +24,8 @@ npx -y --allow-remote=all -p filoscope qmd --index filoscope get 'qmd://fips/FIP
 
 - Give grounded answers. Back claims by retrieved Filoscope sources.
 - Do not answer from snippets alone when the user needs facts, decisions, quotes, APIs, specs, or nuance. Snippets are only leads.
-- Final answers cite GitHub line URLs. Never cite in `qmd://` style. Treat docids as retrieval handles, not final citations. Explore the relevant [collection](./collections) - [connector](./connector) pair and produce real URLs.
-  - `qmd://filecoin-pay/README.md:90:14` → `https://github.com/FilOzone/filecoin-pay/blob/HEAD/README.md#L90-L103`
+- Final answers cite GitHub line URLs. Never cite in `qmd://` style. Treat docids as retrieval handles, not final citations. Explore the relevant [collection](./collections) - [connector](./connector) pair code and manually produce real working URLs.
+  - `qmd://filecoin-pay/README.md?index=filoscope:90:14` → `https://github.com/FilOzone/filecoin-pay/blob/HEAD/README.md#L90-L103`
 
 ## Feedback
 
