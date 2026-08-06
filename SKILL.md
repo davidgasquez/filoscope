@@ -20,6 +20,15 @@ npx -y --allow-remote=all -p filoscope qmd --index filoscope search 'FIP-0081' -
 npx -y --allow-remote=all -p filoscope qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
+When an unscoped search is too broad, list the available areas and resolve one to QMD collection filters:
+
+```bash
+npx -y --allow-remote=all filoscope areas
+npx -y --allow-remote=all filoscope area onchain-cloud
+```
+
+Pass the emitted `-c <collection>` arguments to `qmd query`, `qmd search`, or `qmd vsearch`. Areas overlap and only scope retrieval; they do not duplicate indexed documents or alter the query.
+
 ## Rules
 
 - Give grounded answers. Back claims by retrieved Filoscope sources.

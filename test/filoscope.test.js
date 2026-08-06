@@ -31,6 +31,7 @@ await fs.writeFile(path.join(destination, \`${"${source}"}.md\`), source);
 
 async function fixture() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "filoscope-test-"));
+  await fs.mkdir(path.join(root, "areas"));
   await fs.mkdir(path.join(root, "collections"));
   await fs.mkdir(path.join(root, "connectors"));
   return root;
@@ -68,6 +69,13 @@ async function writeCollection(
   );
 }
 
+async function writeArea(root, name, collections, description = `${name} area`) {
+  await fs.writeFile(
+    path.join(root, "areas", `${name}.yml`),
+    YAML.stringify({ description, collections }, { lineWidth: 0 }),
+  );
+}
+
 async function writeConnector(root, contents = materializingConnector) {
   await fs.writeFile(path.join(root, "connectors", "fixture.js"), contents);
 }
@@ -79,7 +87,18 @@ async function writeFile(directory, name, contents = name) {
 
 async function qmdIndexGzip(root) {
   const dbPath = path.join(root, "release.sqlite");
-  const store = await createStore({ dbPath });
+  const store = await createStore({
+    dbPath,
+    config: {
+      collections: {
+        test: {
+          path: root,
+          pattern: "**/*.md",
+          context: { "/": "Test collection" },
+        },
+      },
+    },
+  });
   const now = new Date().toISOString();
   store.internal.insertContent("test-hash", "Filecoin test document", now);
   store.internal.insertDocument("test", "document.md", "Test", "test-hash", now, now);
@@ -136,6 +155,36 @@ test("config rejects manifests outside the current schema", async (t) => {
 
   await assert.rejects(runCli(root, "config"), (error) => {
     assert.match(error.stderr, /Collection field "pattern" must be a non-empty string/);
+    return true;
+  });
+});
+
+test("areas list descriptions and emit composable QMD collection filters", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await writeCollection(root, "alpha");
+  await writeCollection(root, "beta");
+  await writeArea(root, "focused", ["alpha", "beta"], "Focused sources");
+
+  const listed = await runCli(root, "areas");
+  const selected = await runCli(root, "area", "focused");
+
+  assert.equal(listed.stdout, "focused\tFocused sources\n");
+  assert.equal(selected.stdout, "-c alpha -c beta\n");
+  await assert.rejects(runCli(root, "area", "unknown"), (error) => {
+    assert.match(error.stderr, /Unknown area: unknown/);
+    return true;
+  });
+});
+
+test("areas reject references to undeclared collections", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await writeCollection(root, "alpha");
+  await writeArea(root, "broken", ["missing"]);
+
+  await assert.rejects(runCli(root, "areas"), (error) => {
+    assert.match(error.stderr, /Area references unknown collection "missing"/);
     return true;
   });
 });
@@ -198,6 +247,54 @@ test("QMD indexes generated collections through the filoscope named index", asyn
   const results = JSON.parse(stdout);
   assert.equal(results.length, 1);
   assert.equal(results[0].file, "qmd://demo/document.md?index=filoscope");
+});
+
+test("area filters restrict QMD searches to their declared collections", async (t) => {
+  const root = await fixture();
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  for (const name of ["alpha", "beta", "gamma"]) {
+    await writeCollection(root, name);
+    await writeFile(
+      path.join(root, ".filoscope", "collections", name),
+      "document.md",
+      `shared area marker ${name}`,
+    );
+  }
+  await writeArea(root, "focused", ["alpha", "gamma"]);
+  await runCli(root, "config");
+
+  const elsewhere = path.join(root, "elsewhere");
+  await fs.mkdir(elsewhere);
+  const env = xdgEnv(root);
+  await execFileAsync(process.execPath, [qmd, "--index", "filoscope", "update"], {
+    cwd: elsewhere,
+    encoding: "utf8",
+    env,
+  });
+  const { stdout: filters } = await runCli(root, "area", "focused");
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [
+      qmd,
+      "--index",
+      "filoscope",
+      "search",
+      '"shared area marker"',
+      ...filters.trim().split(/\s+/),
+      "--all",
+      "--format",
+      "json",
+    ],
+    { cwd: elsewhere, encoding: "utf8", env },
+  );
+
+  assert.deepEqual(
+    JSON.parse(stdout).map((result) => result.file).sort(),
+    [
+      "qmd://alpha/document.md?index=filoscope",
+      "qmd://gamma/document.md?index=filoscope",
+    ],
+  );
 });
 
 test("CLI uses the nearest workspace", async (t) => {
@@ -416,10 +513,14 @@ test("pull skips the latest published index unless the database is missing", asy
   t.after(() => server.close());
 
   const previousCacheHome = process.env.XDG_CACHE_HOME;
+  const previousConfigHome = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CACHE_HOME = path.join(root, "xdg", "cache");
+  process.env.XDG_CONFIG_HOME = path.join(root, "xdg", "config");
   t.after(() => {
     if (previousCacheHome === undefined) delete process.env.XDG_CACHE_HOME;
     else process.env.XDG_CACHE_HOME = previousCacheHome;
+    if (previousConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = previousConfigHome;
   });
 
   const releaseUrl = `http://127.0.0.1:${server.address().port}/release`;
@@ -433,6 +534,21 @@ test("pull skips the latest published index unless the database is missing", asy
   assert.equal(assetDownloads, 1);
   assert.equal((await fs.readFile(destination)).subarray(0, 15).toString(), "SQLite format 3");
   assert.equal(await fs.readFile(tagPath, "utf8"), `${tag}\n`);
+  assert.deepEqual(YAML.parse(await fs.readFile(qmdConfigFile(root), "utf8")), {
+    collections: {
+      test: {
+        path: root,
+        pattern: "**/*.md",
+        context: { "/": "Test collection" },
+      },
+    },
+  });
+  const { stdout } = await execFileAsync(
+    process.execPath,
+    [qmd, "--index", "filoscope", "search", "Filecoin", "-c", "test", "--format", "json"],
+    { cwd: root, encoding: "utf8", env: xdgEnv(root) },
+  );
+  assert.equal(JSON.parse(stdout).length, 1);
 
   await fs.rm(destination);
   assert.deepEqual(await pullIndex(releaseUrl), { destination, tag, updated: true });
@@ -462,10 +578,14 @@ test("pull rejects an invalid database and preserves the current index and relea
   t.after(() => server.close());
 
   const previousCacheHome = process.env.XDG_CACHE_HOME;
+  const previousConfigHome = process.env.XDG_CONFIG_HOME;
   process.env.XDG_CACHE_HOME = path.join(root, "xdg", "cache");
+  process.env.XDG_CONFIG_HOME = path.join(root, "xdg", "config");
   t.after(() => {
     if (previousCacheHome === undefined) delete process.env.XDG_CACHE_HOME;
     else process.env.XDG_CACHE_HOME = previousCacheHome;
+    if (previousConfigHome === undefined) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = previousConfigHome;
   });
 
   const cache = path.join(root, "xdg", "cache", "qmd");
@@ -473,12 +593,15 @@ test("pull rejects an invalid database and preserves the current index and relea
   const tagPath = path.join(cache, "filoscope.release-tag.txt");
   await writeFile(cache, "filoscope.sqlite", "current index");
   await writeFile(cache, "filoscope.release-tag.txt", "filoscope-index-20260710T153012Z\n");
+  await fs.mkdir(path.dirname(qmdConfigFile(root)), { recursive: true });
+  await fs.writeFile(qmdConfigFile(root), "collections:\n  current: {}\n");
 
   await assert.rejects(
     pullIndex(`http://127.0.0.1:${server.address().port}/release`),
   );
   assert.equal(await fs.readFile(destination, "utf8"), "current index");
   assert.equal(await fs.readFile(tagPath, "utf8"), "filoscope-index-20260710T153012Z\n");
+  assert.equal(await fs.readFile(qmdConfigFile(root), "utf8"), "collections:\n  current: {}\n");
   await assert.rejects(fs.access(`${destination}.tmp`), { code: "ENOENT" });
   await assert.rejects(fs.access(`${tagPath}.tmp`), { code: "ENOENT" });
 });

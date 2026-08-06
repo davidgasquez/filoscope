@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadAreas } from "./areas.js";
 import { loadCollections, writeQmdConfig } from "./config.js";
 import { pullIndex } from "./pull.js";
 import { syncCollections } from "./sync.js";
@@ -10,6 +11,8 @@ Usage:
   filoscope config
   filoscope pull
   filoscope publish
+  filoscope areas
+  filoscope area <area-name>
 `;
 
 async function main(argv) {
@@ -39,6 +42,14 @@ async function main(argv) {
       const target = await preparePublish();
       await sync([]);
       await publishIndex(target);
+      return;
+    case "areas":
+      if (args.length > 0) throw new Error("Usage: filoscope areas");
+      await listAreas();
+      return;
+    case "area":
+      if (args.length !== 1) throw new Error("Usage: filoscope area <area-name>");
+      await selectArea(args[0]);
       return;
     default:
       throw new Error(`Unknown command: ${command}\n\n${usage.trim()}`);
@@ -72,6 +83,18 @@ async function config() {
   const collections = await loadCollections();
   const configPath = await writeQmdConfig(collections);
   console.log(`Generated ${configPath}`);
+}
+
+async function listAreas() {
+  const areas = await loadAreas();
+  for (const area of areas) console.log(`${area.name}\t${area.description}`);
+}
+
+async function selectArea(name) {
+  const areas = await loadAreas();
+  const area = areas.find((candidate) => candidate.name === name);
+  if (!area) throw new Error(`Unknown area: ${name}`);
+  console.log(area.collections.flatMap((collection) => ["-c", collection]).join(" "));
 }
 
 main(process.argv.slice(2)).catch((error) => {

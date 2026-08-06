@@ -1,6 +1,9 @@
 import { statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const QMD_INDEX_NAME = "filoscope";
 
@@ -49,6 +52,17 @@ export function collectionsRoot() {
 
 export function connectorsRoot() {
   return path.join(projectRoot(), "connectors");
+}
+
+export function areasRoot(start = process.cwd()) {
+  try {
+    return path.join(projectRoot(start), "areas");
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.startsWith("No Filoscope workspace found")) {
+      throw error;
+    }
+    return path.join(packageRoot, "areas");
+  }
 }
 
 export function materializedRoot() {

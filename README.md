@@ -28,6 +28,25 @@ npx --package filoscope qmd --index filoscope query 'how do storage providers pr
 npx --package filoscope qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
+### Areas
+
+Areas are named, overlapping bundles of collections that narrow broad searches.
+List them or emit the corresponding QMD collection filters:
+
+```bash
+npx filoscope areas
+npx filoscope area onchain-cloud
+# -c dealbot -c filecoin-cloud ... -c synapse-sdk
+```
+
+Compose the selector directly with QMD:
+
+```bash
+npx --package filoscope qmd --index filoscope query \
+  'how are PDP storage payments settled?' \
+  $(npx filoscope area onchain-cloud)
+```
+
 To build an index from the sources, run these commands from the repository. The `sync` command materializes the collections and generates the named `filoscope` QMD config. A GitHub token is required to export FIP discussions.
 
 ```bash
@@ -37,7 +56,7 @@ npm exec -- qmd --index filoscope update && npm exec -- qmd --index filoscope em
 
 ## 📦 Developing
 
-Each collection is a YAML file in [`collections/`](collections/) pointing to a source repository. A [GitHub Action](.github/workflows/build-index.yml) syncs all collections daily, builds the [`qmd`](https://github.com/tobi/qmd) index, and publishes it as a release artifact.
+Each collection is a YAML file in [`collections/`](collections/) pointing to a source repository. Areas in [`areas/`](areas/) group collections for scoped searches. A [GitHub Action](.github/workflows/build-index.yml) syncs all collections daily, builds the [`qmd`](https://github.com/tobi/qmd) index, and publishes it as a release artifact.
 
 From a clean worktree with `HEAD` pushed to GitHub, run the same publish path locally:
 
@@ -56,6 +75,20 @@ pattern: "**/*.{md,go,sh,toml,json,yml,yaml}"
 ```
 
 Connectors are picked by the source scheme (`github:`, `github-discussion:`).
+
+### 🗂️ Adding an area
+
+Drop a YAML file in `areas/` with a description and one or more existing collection names:
+
+```yaml
+description: Filecoin protocol design, governance, network upgrades, and built-in actors.
+collections:
+  - builtin-actors
+  - fips
+  - fips-github-discussions
+```
+
+Collections can belong to multiple areas; their indexed documents are not duplicated.
 
 ## 📜 License
 
