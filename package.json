@@ -4,27 +4,35 @@
   "description": "A Filecoin knowledge base built for your agents",
   "type": "module",
   "bin": {
-    "filoscope": "src/cli.js"
+    "filoscope": "dist/src/cli.js"
   },
   "files": [
-    "AGENTS.md",
+    "LICENSE",
     "README.md",
-    "areas/",
-    "collections/",
-    "connectors/",
-    "src/"
+    "SKILL.md",
+    "dist/"
   ],
   "scripts": {
-    "filoscope": "node src/cli.js",
-    "test": "node --test"
+    "filoscope": "node --env-file-if-exists=.env src/cli.ts",
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc",
+    "check": "tsc --noEmit && tsc --project tsconfig.test.json",
+    "test": "node --test test/*.test.ts",
+    "prepack": "npm run build"
   },
   "dependencies": {
+    "@kreuzberg/node": "^4.10.2",
+    "@slack/web-api": "^8.0.0",
     "@tobilu/qmd": "2.8.3",
-    "tar": "^7.5.19",
+    "google-auth-library": "^10.9.1",
+    "tar": "^7.5.22",
     "yaml": "^2.9.0"
   },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.22.2"
   },
   "repository": {
     "type": "git",

@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.22.2"
           cache: npm
 
       - name: Install dependencies
@@ -36,7 +36,9 @@ jobs:
           npm exec -- qmd embed --help | grep -F -- "--timeout <minutes>"
 
       - name: Test
-        run: npm test
+        run: |
+          npm run check
+          npm test
 
       - name: Cache QMD models
         uses: actions/cache@v4

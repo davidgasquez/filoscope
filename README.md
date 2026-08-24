@@ -1,95 +1,131 @@
-# Filoscope 🔭
+# Filoscope
 
-A Filecoin knowledge base built for your agents.
+Filoscope materializes Filecoin knowledge as a local tree of useful files.
+It can also build and publish a named [QMD](https://github.com/tobi/qmd) index from those files.
 
-Filoscope bundles Filecoin docs, FIPs, specs, code, and ecosystem projects into a single searchable index. No setup needed!
+Collections and areas are TypeScript values. Each connector validates its own options and writes one collection to `.filoscope/collections/<name>/`. Repository connectors preserve selected source files. Document connectors write Markdown with minimal OKF frontmatter and links to the canonical source.
 
-## 🚀 Quick Start
+## Use the published index
 
-Point your agent at the [Filoscope SKILL](https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/SKILL.md) and ask away.
-
-```
-Read https://raw.githubusercontent.com/davidgasquez/filoscope/refs/heads/main/SKILL.md and tell me how Filecoin Pay Rails work
-```
-
-### 🔎 CLI
-
-You can manually update the index. Filoscope checks the latest release tag and downloads the database only when it has changed.
+Install the latest published index and its QMD configuration:
 
 ```bash
-npx filoscope pull
+npx -y --allow-remote=all filoscope pull
 ```
 
-The downloaded database lives in a named `filoscope` index for [`qmd`](https://github.com/tobi/qmd). Search it from anywhere with `--index filoscope`.
+The index is named `filoscope`, so you can search it from any directory:
 
 ```bash
-npx --package filoscope qmd --index filoscope search 'FIP-0081' -c fips -n 5
-npx --package filoscope qmd --index filoscope query 'how do storage providers prove storage over time'
-npx --package filoscope qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
+npx -y --allow-remote=all -p filoscope qmd --index filoscope search 'FIP-0081' -c fips -n 5
+npx -y --allow-remote=all -p filoscope qmd --index filoscope query 'how do storage providers prove storage over time'
+npx -y --allow-remote=all -p filoscope qmd --index filoscope get 'qmd://fips/FIPS/fip-0081.md'
 ```
 
-### Areas
-
-Areas are named, overlapping bundles of collections that narrow broad searches.
-List them or emit the corresponding QMD collection filters:
+Areas provide reusable collection filters for broad subjects:
 
 ```bash
-npx filoscope areas
-npx filoscope area onchain-cloud
-# -c dealbot -c filecoin-cloud ... -c synapse-sdk
+npx -y --allow-remote=all filoscope areas
+npx -y --allow-remote=all filoscope area onchain-cloud
 ```
 
-Compose the selector directly with QMD:
+You can pass the result directly to QMD:
 
 ```bash
-npx --package filoscope qmd --index filoscope query \
+npx -y --allow-remote=all -p filoscope qmd --index filoscope query \
   'how are PDP storage payments settled?' \
-  $(npx filoscope area onchain-cloud)
+  $(npx -y --allow-remote=all filoscope area onchain-cloud)
 ```
 
-To build an index from the sources, run these commands from the repository. The `sync` command materializes the collections and generates the named `filoscope` QMD config. A GitHub token is required to export FIP discussions.
+## Materialize local files
+
+Use Node.js 22.22.2 or later. Clone the repository and install its dependencies:
 
 ```bash
-GH_TOKEN="$(gh auth token)" npx filoscope sync
-npm exec -- qmd --index filoscope update && npm exec -- qmd --index filoscope embed
+npm ci --allow-remote=all
 ```
 
-## 📦 Developing
+Materialize every collection, or name the collections you need:
 
-Each collection is a YAML file in [`collections/`](collections/) pointing to a source repository. Areas in [`areas/`](areas/) group collections for scoped searches. A [GitHub Action](.github/workflows/build-index.yml) syncs all collections daily, builds the [`qmd`](https://github.com/tobi/qmd) index, and publishes it as a release artifact.
+```bash
+npm run filoscope -- sync
+npm run filoscope -- sync fips lotus
+```
 
-From a clean worktree with `HEAD` pushed to GitHub, run the same publish path locally:
+`sync` only writes local collection files. It does not require QMD and does not generate QMD configuration. A full sync removes undeclared collection directories. A named sync leaves other directories unchanged.
+
+Generate the named QMD configuration when you want to build an index:
+
+```bash
+npm run filoscope -- config
+npm exec -- qmd --index filoscope update
+npm exec -- qmd --index filoscope embed
+```
+
+## Define a collection
+
+Each file in `collections/` exports exactly one collection. Collection names are explicit and must be unique across the workspace.
+
+```ts
+import { github } from "../src/connectors/github.ts";
+
+export default github({
+  name: "lotus",
+  context: "Go implementation of the Filecoin Lotus node, miner, worker, and gateway.",
+  repository: "filecoin-project/lotus",
+  include: "**/*.{md,go,sh,toml,json,yml,yaml}",
+});
+```
+
+The `include` option controls which repository files are materialized. QMD uses `**/*` for every collection because connectors only write useful files.
+
+Filoscope also includes connectors for GitHub Discussions, Google Drive, and Slack. Document connectors emit one Markdown file for each source unit and use this frontmatter:
+
+```yaml
+type: Reference
+title: Document title
+context: Why this collection exists
+resource: https://canonical.example/document
+updated_at: 2026-08-20T10:00:00Z
+```
+
+## Define an area
+
+Each file in `areas/` exports one area containing collection names:
+
+```ts
+import type { Area } from "../src/types.ts";
+
+export default {
+  name: "protocol",
+  description: "Filecoin protocol design, governance, network upgrades, and built-in actors.",
+  collections: ["builtin-actors", "fips", "fips-github-discussions"],
+} satisfies Area;
+```
+
+Areas only select QMD collections. They do not copy or materialize files.
+
+## Publish the index
+
+`publish` checks for a GitHub token and a clean commit that exists on GitHub. It then syncs every collection, generates the QMD configuration, updates and embeds the index, validates SQLite, compresses the database, and creates a GitHub release.
 
 ```bash
 GH_TOKEN="$(gh auth token)" npm run filoscope -- publish
 ```
 
-### 🛠️ Adding a collection
+The scheduled GitHub workflow uses the same command. A separate workflow keeps the seven newest index releases.
 
-Drop a YAML file in `collections/` with `source`, `context`, and `pattern`:
+## Develop
 
-```yaml
-source: github:filecoin-project/lotus
-context: Go implementation of Filecoin Lotus node, miner, worker, and gateway.
-pattern: "**/*.{md,go,sh,toml,json,yml,yaml}"
+Run all static checks and fixture tests before packing the package:
+
+```bash
+npm run check
+npm test
+npm pack
 ```
 
-Connectors are picked by the source scheme (`github:`, `github-discussion:`).
+`npm test` includes a packed package test. It installs the tarball in a temporary project and runs the compiled `filoscope` bin without a TypeScript loader.
 
-### 🗂️ Adding an area
-
-Drop a YAML file in `areas/` with a description and one or more existing collection names:
-
-```yaml
-description: Filecoin protocol design, governance, network upgrades, and built-in actors.
-collections:
-  - builtin-actors
-  - fips
-  - fips-github-discussions
-```
-
-Collections can belong to multiple areas; their indexed documents are not duplicated.
-
-## 📜 License
+## License
 
 MIT

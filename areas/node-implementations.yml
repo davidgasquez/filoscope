@@ -1,5 +1,0 @@
-description: Filecoin node implementations, chain execution, networking, APIs, and built-in actor integration.
-collections:
-  - builtin-actors
-  - forest
-  - lotus

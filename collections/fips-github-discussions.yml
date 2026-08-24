@@ -1,3 +1,0 @@
-source: github-discussion:filecoin-project/FIPs
-context: GitHub Discussions from the Filecoin FIPs repository
-pattern: "**/*.md"
