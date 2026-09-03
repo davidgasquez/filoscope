@@ -1,0 +1,8 @@
+import { github } from "../src/connectors/github.ts";
+
+export default github({
+  name: "porep-market",
+  context: "Solidity and Foundry contracts plus V2 specs for PoRep Market, covering Filecoin storage deal orchestration, storage-provider offer matching and capacity, DataCap and VerifReg evidence adapters, SLI validation, FilecoinPay validator settlement, deployments, ABIs, tests, and V1 reference snapshot.",
+  repository: "fidlabs/porep-market",
+  include: "**/*.{md,sol,sh,json,toml,yml,yaml}",
+});

@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "module": "NodeNext",
+    "outDir": "dist",
+    "rewriteRelativeImportExtensions": true,
+    "rootDir": ".",
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2023",
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "collections/**/*.ts", "areas/**/*.ts"]
+}

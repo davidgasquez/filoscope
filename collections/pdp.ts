@@ -1,0 +1,8 @@
+import { github } from "../src/connectors/github.ts";
+
+export default github({
+  name: "pdp",
+  context: "Solidity contracts, tests, deployment scripts, and design notes for Filecoin Provable Data Possession, covering PDPVerifier data sets, Piece CID v2 handling, Merkle possession proofs, challenge randomness, proving periods, fault reporting, gas benchmarks, upgrades, and cleanup deposits.",
+  repository: "FilOzone/pdp",
+  include: "**/*.{md,sol,ts,js,sh,json,toml,yml,yaml}",
+});
