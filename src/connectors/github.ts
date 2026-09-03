@@ -1,6 +1,6 @@
-import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { Minimatch } from "minimatch";
 import * as tar from "tar";
 import { defineCollection } from "../collection.ts";
 import type { Collection, CollectionConfig } from "../types.ts";
@@ -58,14 +58,15 @@ async function materializeGitHub(
     );
   }
   if (!response.body) throw new Error("GitHub archive download returned an empty body");
+  const include = collection.include ? new Minimatch(collection.include) : undefined;
 
   await pipeline(
     Readable.from(response.body),
     tar.x({
       cwd: destination,
       strip: 1,
-      filter: collection.include
-        ? (archivePath) => path.matchesGlob(withoutArchiveRoot(archivePath), collection.include!)
+      filter: include
+        ? (archivePath) => include.match(withoutArchiveRoot(archivePath))
         : undefined,
     }),
   );
@@ -93,7 +94,7 @@ function normalizeGitHubOptions(collection: GitHubOptions, location: string): Gi
     }
     include = include.trim();
     try {
-      path.matchesGlob("file", include);
+      new Minimatch(include);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(

@@ -12,7 +12,7 @@ const collection: GitHubOptions = {
   name: "fixture-repository",
   context: "Fixture GitHub repository.",
   repository: "protocol/plrd.org",
-  include: "**/*.md",
+  include: "**/*.{md,json}",
 };
 
 test("GitHub preserves selected source bytes and paths", async (t) => {
@@ -24,6 +24,7 @@ test("GitHub preserves selected source bytes and paths", async (t) => {
   const markdown = Buffer.from([0x2d, 0x2d, 0x2d, 0x0a, 0x23, 0x20, 0x46, 0x69, 0x78, 0x74, 0x75, 0x72, 0x65, 0x0a]);
   await fs.writeFile(path.join(archiveRoot, "README.md"), "# Fixture\n");
   await fs.writeFile(path.join(archiveRoot, "content", "about", "index.md"), markdown);
+  await fs.writeFile(path.join(archiveRoot, "metadata.json"), "{}\n");
   await fs.writeFile(path.join(archiveRoot, "src", "index.ts"), "export {};\n");
 
   const archive = path.join(root, "repository.tgz");
@@ -46,7 +47,7 @@ test("GitHub preserves selected source bytes and paths", async (t) => {
     apiBase: `http://127.0.0.1:${address.port}`,
   });
 
-  assert.deepEqual(await fs.readdir(destination), ["README.md", "content"]);
+  assert.deepEqual(await fs.readdir(destination), ["README.md", "content", "metadata.json"]);
   assert.deepEqual(await fs.readFile(path.join(destination, "content", "about", "index.md")), markdown);
   await assert.rejects(fs.access(path.join(destination, "src", "index.ts")), { code: "ENOENT" });
   assert.deepEqual(request, {
