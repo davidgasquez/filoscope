@@ -32,7 +32,7 @@ jobs:
 
       - name: Verify QMD
         run: |
-          npm ls @tobilu/qmd --depth=0 | grep -F -- "@tobilu/qmd@2.6.3"
+          npm ls @tobilu/qmd --depth=0 | grep -F -- "@tobilu/qmd@2.8.3"
           npm exec -- qmd embed --help | grep -F -- "--timeout <minutes>"
 
       - name: Test
