@@ -38,7 +38,7 @@ npx -y --allow-remote=all -p filoscope qmd --index filoscope query \
 
 ## Materialize local files
 
-Use Node.js 22.22.2 or later. Clone the repository and install its dependencies:
+Use Node.js 22.21.1 or later. Clone the repository and install its dependencies:
 
 ```bash
 npm ci --allow-remote=all

@@ -20,7 +20,7 @@
     "prepack": "npm run build"
   },
   "dependencies": {
-    "@kreuzberg/node": "^4.10.2",
+    "@kreuzberg/node": "4.9.7",
     "@slack/web-api": "^8.0.0",
     "@tobilu/qmd": "2.8.3",
     "google-auth-library": "^10.9.1",
@@ -33,7 +33,7 @@
     "typescript": "^5.9.0"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=22.21.1"
   },
   "repository": {
     "type": "git",

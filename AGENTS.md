@@ -24,7 +24,7 @@ Minimal and local-friendly Filecoin knowledge base.
 
 - Keep the kernel small and explicit
 - Use small typed connector functions with connector-owned validation
-- Use Node.js 22.22.2+, TypeScript, and npm
+- Use Node.js 22.21.1+, TypeScript, and npm
 - Compile npm artifacts to JavaScript
 - Generated state must always be reconstructable
 - Do not preserve backward compatibility unless asked
