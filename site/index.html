@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Filoscope — Filecoin knowledge for your agents</title>
+    <meta name="description" content="Search Filecoin documentation, FIPs, code, and ecosystem projects with your agent. Local files, a published QMD index, and canonical sources.">
+    <link rel="canonical" href="https://davidgasquez.github.io/filoscope/">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Filoscope — Filecoin knowledge for your agents">
+    <meta property="og:description" content="A local-first Filecoin knowledge base. Give your agent the skill, ask a question, and follow the sources.">
+    <meta property="og:url" content="https://davidgasquez.github.io/filoscope/">
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f5f5f1;
+        --ink: #141414;
+        --muted: #52524b;
+        --rule: #bcbcb3;
+        --focus: #0f62fe;
+        font-family: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+        font-size: 15px;
+        line-height: 1.65;
+        background: var(--paper);
+        color: var(--ink);
+      }
+      *, *::before, *::after { box-sizing: border-box; }
+      body { max-inline-size: 46rem; margin: 0 auto; padding: 0 1.5rem; }
+      a { color: inherit; text-underline-offset: .22em; text-decoration-thickness: 1px; }
+      a:hover { text-decoration-thickness: 2px; }
+      :focus-visible { outline: 2px solid var(--focus); outline-offset: 4px; }
+      p, h1, h2, ul, pre { margin: 0; }
+      p + p { margin-block-start: 1rem; }
+      button { font: inherit; }
+      [hidden] { display: none !important; }
+      .skip { position: absolute; inset-block-start: 1rem; transform: translateY(-200%); background: var(--ink); color: var(--paper); padding: .5rem; }
+      .skip:focus { transform: none; }
+      header, footer { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+      header { padding-block: 1.75rem; border-block-end: 1px solid var(--rule); }
+      .brand { font-weight: 700; letter-spacing: -.05em; text-decoration: none; }
+      nav { display: flex; flex-wrap: wrap; gap: 1.25rem; font-size: .85rem; }
+      .intro { padding-block: 4.5rem 3.5rem; text-align: center; }
+      h1 { font-size: clamp(1.85rem, 5vw, 2.9rem); line-height: 1.15; letter-spacing: -.065em; text-wrap: balance; }
+      .intro p { max-inline-size: 53ch; margin: 1.5rem auto 0; color: var(--muted); text-wrap: pretty; }
+      section { margin-block-end: 3.5rem; }
+      h2 { display: flex; gap: 1rem; padding-block-end: .75rem; margin-block-end: 1.25rem; border-block-end: 1px solid var(--rule); font-size: .9rem; line-height: 1.4; letter-spacing: .1em; text-transform: uppercase; }
+      .number { color: var(--muted); font-weight: 400; letter-spacing: 0; }
+      .code-block { margin-block: 1.25rem 1rem; border: 1px solid var(--ink); min-inline-size: 0; }
+      .prompt { border-width: 2px; }
+      .code-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .85rem; border-block-end: 1px solid var(--rule); }
+      .code-label { color: var(--muted); font-size: .75rem; letter-spacing: .06em; text-transform: uppercase; }
+      .copy { min-block-size: 2.2rem; padding: .25rem .7rem; border: 1px solid var(--ink); border-radius: 0; background: var(--ink); color: var(--paper); font-size: .75rem; cursor: pointer; }
+      .copy:hover { background: var(--paper); color: var(--ink); }
+      pre { padding: 1.1rem; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .87rem; line-height: 1.7; }
+      code { font-family: inherit; }
+      .note { color: var(--muted); font-size: .82rem; }
+      .contents { list-style: none; padding: 0; margin-block: 1.25rem; }
+      .contents li { padding-block: .6rem; border-block-end: 1px solid var(--rule); }
+      .contents li:first-child { border-block-start: 1px solid var(--rule); }
+      .contents strong { font-weight: 600; }
+      .contents span { color: var(--muted); }
+      footer { margin-block-start: 4rem; padding-block: 1.25rem 2rem; border-block-start: 1px solid var(--rule); color: var(--muted); font-size: .8rem; }
+      .status { position: fixed; inset-block-end: 1rem; inset-inline: 1rem; inline-size: fit-content; max-inline-size: calc(100% - 2rem); margin-inline: auto; padding: .65rem 1rem; border: 1px solid var(--ink); background: var(--paper); font-size: .85rem; }
+      .status:empty { display: none; }
+      @media (max-width: 30rem) {
+        body { padding-inline: 1rem; }
+        header { padding-block: 1.25rem; }
+        .intro { padding-block: 3rem; }
+        pre { padding: .85rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header>
+      <a class="brand" href="./" aria-label="Filoscope home">filoscope</a>
+      <nav aria-label="Primary">
+        <a href="SKILL.md">Skill</a>
+        <a href="https://github.com/davidgasquez/filoscope">GitHub ↗</a>
+      </nav>
+    </header>
+    <main id="main">
+      <div class="intro">
+        <h1>Filecoin knowledge,<br>for your agents.</h1>
+        <p>Documentation, FIPs, code, and ecosystem projects.<br>A local-first knowledge base with sources you can follow.</p>
+      </div>
+      <section aria-labelledby="ask">
+        <h2 id="ask"><span class="number" aria-hidden="true">01</span> Ask your agent</h2>
+        <p>Give your coding agent the <a href="SKILL.md">Filoscope skill</a> and a question. Start with this:</p>
+        <div class="code-block prompt">
+          <div class="code-header">
+            <span class="code-label">Agent prompt</span>
+            <button class="copy" type="button" data-copy="prompt" aria-label="Copy agent prompt" hidden>Copy prompt</button>
+          </div>
+          <pre><code id="prompt">Read and follow <a href="SKILL.md">https://davidgasquez.github.io/filoscope/SKILL.md</a>.
+Use Filoscope to explain how Filecoin storage providers prove storage over time.
+Retrieve the relevant sources and cite their canonical URLs.</code></pre>
+        </div>
+        <p class="note">The skill explains how to pull the published QMD index, retrieve documents, and cite original sources. It’s plain Markdown, ready for your agent to read.</p>
+      </section>
+      <section aria-labelledby="local">
+        <h2 id="local"><span class="number" aria-hidden="true">02</span> Search locally</h2>
+        <p>Prefer the terminal? Install the published index, then query it from any directory.</p>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-label">Pull the index</span>
+            <button class="copy" type="button" data-copy="pull" aria-label="Copy pull command" hidden>Copy</button>
+          </div>
+          <pre><code id="pull">npx -y --allow-remote=all filoscope pull</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-label">Ask a question</span>
+            <button class="copy" type="button" data-copy="query" aria-label="Copy query command" hidden>Copy</button>
+          </div>
+          <pre><code id="query">npx -y --allow-remote=all -p filoscope qmd --index filoscope query 'how do storage providers prove storage over time'</code></pre>
+        </div>
+        <p class="note">Requires Node.js 22.21.1 or later. Retrieval runs locally with <a href="https://github.com/tobi/qmd">QMD</a>; Filoscope publishes the index. See the <a href="https://github.com/davidgasquez/filoscope#materialize-local-files">README</a> to materialize source files yourself.</p>
+      </section>
+      <section aria-labelledby="inside">
+        <h2 id="inside"><span class="number" aria-hidden="true">03</span> What’s inside</h2>
+        <p>Canonical sources, collected as useful files. Collections describe what to fetch; overlapping areas help narrow your search.</p>
+        <ul class="contents">
+          <li><strong>Protocol.</strong> <span>FIPs, governance discussions, and built-in actors.</span></li>
+          <li><strong>Implementations.</strong> <span>Lotus, Forest, Curio, and proof libraries.</span></li>
+          <li><strong>Ecosystem.</strong> <span>Documentation, onchain cloud, payments, and data.</span></li>
+        </ul>
+        <p><a href="https://github.com/davidgasquez/filoscope/tree/main/collections">Browse collections ↗</a><br><a href="https://github.com/davidgasquez/filoscope/tree/main/areas">Explore areas ↗</a></p>
+      </section>
+    </main>
+    <footer>
+      <span>Open source. Filesystem first.</span>
+      <nav aria-label="Project">
+        <a href="https://www.npmjs.com/package/filoscope">npm</a>
+        <a href="SKILL.md">SKILL.md</a>
+        <a href="https://github.com/davidgasquez/filoscope/blob/main/LICENSE">MIT</a>
+      </nav>
+    </footer>
+    <p class="status" role="status" aria-live="polite" aria-atomic="true"></p>
+    <script type="module">
+      const status = document.querySelector('.status');
+      let statusTimer;
+      for (const button of document.querySelectorAll('[data-copy]')) {
+        const source = document.getElementById(button.dataset.copy);
+        if (!source) continue;
+        const label = button.textContent;
+        let resetTimer;
+        button.hidden = false;
+        button.addEventListener('click', async () => {
+          clearTimeout(resetTimer);
+          clearTimeout(statusTimer);
+          try {
+            await navigator.clipboard.writeText(source.textContent.trim());
+            button.textContent = 'Copied!';
+            status.textContent = 'Copied to clipboard.';
+          } catch {
+            button.textContent = label;
+            const range = document.createRange();
+            range.selectNodeContents(source);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            status.textContent = 'Clipboard unavailable. Text selected; copy it manually.';
+          }
+          resetTimer = setTimeout(() => { button.textContent = label; }, 2000);
+          statusTimer = setTimeout(() => { status.textContent = ''; }, 6000);
+        });
+      }
+    </script>
+  </body>
+</html>

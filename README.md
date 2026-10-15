@@ -6,13 +6,15 @@ It can also build and publish a named [QMD](https://github.com/tobi/qmd) index f
 Collections and areas are TypeScript values. Each connector validates its own options and writes one collection to `.filoscope/collections/<name>/`. Repository connectors preserve selected source files. Document connectors write Markdown with minimal OKF frontmatter and links to the canonical source.
 
 > [!TIP]
-> **Ask your agent.** Copy this prompt into your coding agent to use the [Filoscope skill](https://raw.githubusercontent.com/davidgasquez/filoscope/main/SKILL.md):
+> **Ask your agent.** Copy this prompt into your coding agent to use the [Filoscope skill](https://davidgasquez.github.io/filoscope/SKILL.md):
 >
 > ```text
-> Read and follow https://raw.githubusercontent.com/davidgasquez/filoscope/main/SKILL.md.
+> Read and follow https://davidgasquez.github.io/filoscope/SKILL.md.
 > Use Filoscope to explain how Filecoin storage providers prove storage over time.
 > Retrieve the relevant sources and cite their canonical URLs.
 > ```
+
+[Visit the website](https://davidgasquez.github.io/filoscope/) · [Read the skill](https://davidgasquez.github.io/filoscope/SKILL.md)
 
 ## Use the published index
 
@@ -134,6 +136,16 @@ npm pack
 ```
 
 `npm test` includes a packed package test. It installs the tarball in a temporary project and runs the compiled `filoscope` bin without a TypeScript loader.
+
+## Website
+
+`site/index.html` is a self-contained static page with no build or frontend dependencies. The Pages workflow publishes it alongside an unchanged copy of the root `SKILL.md` whenever either changes on `main`. Local preview:
+
+```bash
+preview="$(mktemp -d)"
+cp site/index.html SKILL.md "$preview/"
+python3 -m http.server 8000 --directory "$preview"
+```
 
 ## License
 
