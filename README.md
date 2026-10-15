@@ -5,6 +5,15 @@ It can also build and publish a named [QMD](https://github.com/tobi/qmd) index f
 
 Collections and areas are TypeScript values. Each connector validates its own options and writes one collection to `.filoscope/collections/<name>/`. Repository connectors preserve selected source files. Document connectors write Markdown with minimal OKF frontmatter and links to the canonical source.
 
+> [!TIP]
+> **Ask your agent.** Copy this prompt into your coding agent to use the [Filoscope skill](SKILL.md):
+>
+> ```text
+> Read and follow https://github.com/davidgasquez/filoscope/blob/main/SKILL.md.
+> Use Filoscope to explain how Filecoin storage providers prove storage over time.
+> Retrieve the relevant sources and cite their canonical URLs.
+> ```
+
 ## Use the published index
 
 Install the latest published index and its QMD configuration:
